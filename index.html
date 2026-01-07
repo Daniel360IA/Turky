@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Inventario Automatizado</title>
+    <title>Sistema de Inventario - Turky</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
         
         :root {
             --bg-primary: #0a0e17;
@@ -46,33 +48,71 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 3rem;
-            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
             border-bottom: 2px solid var(--border);
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 800;
             background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header h1 .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 10px;
         }
 
         .header-actions {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Storage Indicator */
+        .storage-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .storage-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         /* Buttons */
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.65rem 1.25rem;
             border: none;
             border-radius: 8px;
             font-family: 'Archivo', sans-serif;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.3s ease;
             display: inline-flex;
@@ -101,17 +141,27 @@
             border-color: var(--accent-primary);
         }
 
+        .btn-danger {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--accent-success);
+            color: white;
+        }
+
         /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
         }
 
         .stat-card {
             background: var(--bg-card);
-            padding: 1.5rem;
+            padding: 1.25rem;
             border-radius: 12px;
             border: 1px solid var(--border);
             position: relative;
@@ -130,12 +180,12 @@
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 212, 255, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);
         }
 
         .stat-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -143,45 +193,46 @@
         }
 
         .stat-value {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
             color: var(--accent-primary);
             font-family: 'JetBrains Mono', monospace;
         }
 
         .stat-change {
-            font-size: 0.85rem;
-            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
         }
 
-        .stat-change.positive {
-            color: var(--accent-success);
-        }
-
-        .stat-change.negative {
-            color: var(--accent-danger);
-        }
+        .stat-change.positive { color: var(--accent-success); }
+        .stat-change.negative { color: var(--accent-danger); }
+        .stat-change.warning { color: var(--accent-warning); }
 
         /* Tabs */
         .tabs {
             display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
             border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            padding-bottom: 0;
         }
 
         .tab {
-            padding: 1rem 2rem;
+            padding: 0.85rem 1.5rem;
             background: none;
             border: none;
             color: var(--text-secondary);
             font-family: 'Archivo', sans-serif;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
             position: relative;
             transition: color 0.3s ease;
+            white-space: nowrap;
         }
+
+        .tab:hover { color: var(--text-primary); }
 
         .tab.active {
             color: var(--accent-primary);
@@ -202,8 +253,8 @@
             background: var(--bg-card);
             border-radius: 12px;
             border: 1px solid var(--border);
-            padding: 2rem;
-            min-height: 500px;
+            padding: 1.5rem;
+            min-height: 400px;
         }
 
         .tab-content {
@@ -211,9 +262,7 @@
             animation: fadeIn 0.3s ease;
         }
 
-        .tab-content.active {
-            display: block;
-        }
+        .tab-content.active { display: block; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -221,48 +270,43 @@
         }
 
         /* Table */
-        .table-container {
-            overflow-x: auto;
-        }
+        .table-container { overflow-x: auto; }
 
         table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        thead {
-            background: var(--bg-secondary);
-        }
+        thead { background: var(--bg-secondary); }
 
         th {
-            padding: 1rem;
+            padding: 0.85rem;
             text-align: left;
             font-weight: 600;
             color: var(--text-secondary);
             text-transform: uppercase;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             letter-spacing: 0.5px;
         }
 
         td {
-            padding: 1rem;
+            padding: 0.85rem;
             border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
         }
 
         tbody tr {
             transition: background 0.2s ease;
         }
 
-        tbody tr:hover {
-            background: var(--bg-secondary);
-        }
+        tbody tr:hover { background: var(--bg-secondary); }
 
         /* Badge */
         .badge {
             display: inline-block;
-            padding: 0.35rem 0.75rem;
+            padding: 0.3rem 0.65rem;
             border-radius: 6px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
             font-family: 'JetBrains Mono', monospace;
         }
@@ -290,9 +334,9 @@
         /* Forms */
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .form-group {
@@ -301,20 +345,20 @@
         }
 
         label {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             font-weight: 600;
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         input, select {
-            padding: 0.75rem;
+            padding: 0.65rem;
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 8px;
             color: var(--text-primary);
             font-family: 'Archivo', sans-serif;
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
         }
 
@@ -326,11 +370,12 @@
 
         /* Alert Box */
         .alert {
-            padding: 1rem 1.5rem;
+            padding: 1rem 1.25rem;
             border-radius: 8px;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 1rem;
             animation: slideIn 0.3s ease;
         }
@@ -341,75 +386,32 @@
         }
 
         .alert-warning {
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            color: var(--accent-warning);
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.25);
         }
 
         .alert-danger {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: var(--accent-danger);
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .alert-info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.25);
         }
 
         /* Charts */
         .chart-container {
             background: var(--bg-secondary);
             padding: 1.5rem;
-            border-radius: 8px;
-            margin-top: 2rem;
-            height: 300px;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
         }
 
-        /* Loading */
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-secondary);
-        }
-
-        .spinner {
-            border: 3px solid var(--border);
-            border-top: 3px solid var(--accent-primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Action Icons */
-        .action-icon {
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .action-icon:hover {
-            background: var(--bg-secondary);
-            transform: scale(1.1);
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
         }
 
         /* Modal */
@@ -428,9 +430,7 @@
             animation: fadeIn 0.3s ease;
         }
 
-        .modal.active {
-            display: flex;
-        }
+        .modal.active { display: flex; }
 
         .modal-content {
             background: var(--bg-card);
@@ -439,14 +439,8 @@
             padding: 2rem;
             max-width: 600px;
             width: 90%;
-            max-height: 80vh;
+            max-height: 85vh;
             overflow-y: auto;
-            animation: slideUp 0.3s ease;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
@@ -460,10 +454,7 @@
 
         .modal-header h2 {
             margin: 0;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 1.25rem;
         }
 
         .modal-close {
@@ -482,17 +473,17 @@
             color: var(--text-primary);
         }
 
+        /* Import Options */
         .import-options {
             display: grid;
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 0.75rem;
         }
 
         .import-option {
-            padding: 1.5rem;
+            padding: 1.25rem;
             background: var(--bg-secondary);
             border: 2px solid var(--border);
-            border-radius: 12px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
@@ -502,28 +493,26 @@
 
         .import-option:hover {
             border-color: var(--accent-primary);
-            transform: translateX(5px);
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(124, 58, 237, 0.05));
+            background: rgba(0, 212, 255, 0.05);
         }
 
-        .import-option-icon {
-            font-size: 2rem;
-        }
+        .import-option-icon { font-size: 1.75rem; }
 
-        .import-option-content h3 {
-            margin: 0 0 0.5rem 0;
+        .import-option h3 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
             color: var(--text-primary);
         }
 
-        .import-option-content p {
+        .import-option p {
             margin: 0;
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .file-upload-area {
             border: 2px dashed var(--border);
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 2rem;
             text-align: center;
             cursor: pointer;
@@ -533,53 +522,217 @@
 
         .file-upload-area:hover {
             border-color: var(--accent-primary);
-            background: rgba(0, 212, 255, 0.05);
+            background: rgba(0, 212, 255, 0.03);
         }
 
-        .file-upload-area.dragging {
-            border-color: var(--accent-primary);
-            background: rgba(0, 212, 255, 0.1);
-        }
-
-        #fileInput {
-            display: none;
-        }
+        #fileInput { display: none; }
 
         textarea {
             width: 100%;
-            min-height: 200px;
+            min-height: 150px;
             padding: 1rem;
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 8px;
             color: var(--text-primary);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             resize: vertical;
         }
 
         textarea:focus {
             outline: none;
             border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
         }
 
         .info-box {
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid rgba(0, 212, 255, 0.3);
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid rgba(0, 212, 255, 0.2);
             border-radius: 8px;
             padding: 1rem;
             margin-bottom: 1rem;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
         }
 
         .info-box code {
             background: var(--bg-secondary);
-            padding: 0.2rem 0.5rem;
+            padding: 0.15rem 0.4rem;
             border-radius: 4px;
             color: var(--accent-primary);
+        }
+
+        /* Filter Pills */
+        .filter-pills {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-pill {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-pill:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .filter-pill.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .filter-pill .count {
+            background: rgba(255,255,255,0.2);
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        .filter-pill.active .count {
+            background: rgba(0,0,0,0.2);
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .summary-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
             font-family: 'JetBrains Mono', monospace;
+        }
+
+        .summary-card .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .summary-card.danger .value { color: var(--accent-danger); }
+        .summary-card.warning .value { color: var(--accent-warning); }
+        .summary-card.success .value { color: var(--accent-success); }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Action Icons */
+        .action-icon {
+            cursor: pointer;
+            padding: 0.4rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .action-icon:hover {
+            background: var(--bg-secondary);
+            transform: scale(1.1);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            border-color: var(--accent-primary);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination button.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .pagination-info {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header h1 { font-size: 1.5rem; }
+            .stat-value { font-size: 1.5rem; }
+            .chart-grid { grid-template-columns: 1fr; }
+            .btn { padding: 0.5rem 1rem; font-size: 0.85rem; }
         }
     </style>
 </head>
@@ -587,17 +740,15 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>📊 Sistema de Inventario</h1>
+            <h1><div class="logo"></div> Sistema de Inventario</h1>
             <div class="header-actions">
-                <button class="btn btn-secondary" onclick="showImportModal()">
-                    📤 Importar Datos
-                </button>
-                <button class="btn btn-secondary" onclick="exportData()">
-                    📥 Exportar Datos
-                </button>
-                <button class="btn btn-primary" onclick="showAddProductModal()">
-                    ➕ Agregar Producto
-                </button>
+                <div class="storage-indicator">
+                    <div class="storage-dot"></div>
+                    <span id="storageStatus">Conectado</span>
+                </div>
+                <button class="btn btn-secondary" onclick="showImportModal()">📤 Importar Datos</button>
+                <button class="btn btn-secondary" onclick="exportData()">📥 Exportar Datos</button>
+                <button class="btn btn-primary" onclick="showAddProductModal()">➕ Agregar Producto</button>
             </div>
         </div>
 
@@ -606,22 +757,22 @@
             <div class="stat-card">
                 <div class="stat-label">Total Productos</div>
                 <div class="stat-value" id="totalProducts">0</div>
-                <div class="stat-change positive" id="productsChange">+0 este mes</div>
+                <div class="stat-change positive" id="productsChange">Cargando...</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Alertas Activas</div>
                 <div class="stat-value" id="totalAlerts">0</div>
-                <div class="stat-change" id="alertsInfo">0 críticas</div>
+                <div class="stat-change warning" id="alertsInfo">0 críticas</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Valor Inventario</div>
                 <div class="stat-value" id="inventoryValue">$0</div>
-                <div class="stat-change positive" id="valueChange">+0%</div>
+                <div class="stat-change positive" id="valueChange">Estimado</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Stock Total</div>
                 <div class="stat-value" id="totalStock">0</div>
-                <div class="stat-change" id="stockInfo">0 unidades</div>
+                <div class="stat-change" id="stockInfo">unidades</div>
             </div>
         </div>
 
@@ -637,12 +788,18 @@
         <div class="content">
             <!-- Inventory Tab -->
             <div id="inventory-tab" class="tab-content active">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                    <h2>Gestión de Inventario</h2>
-                    <div style="display: flex; gap: 1rem;">
-                        <input type="text" id="searchProduct" placeholder="🔍 Buscar producto..." style="min-width: 300px;" oninput="filterProducts()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="font-size: 1.25rem;">Gestión de Inventario</h2>
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <input type="text" id="searchProduct" placeholder="🔍 Buscar producto..." style="min-width: 250px;" oninput="filterProducts()">
                         <select id="filterCategory" onchange="filterProducts()">
                             <option value="">Todas las categorías</option>
+                        </select>
+                        <select id="filterStatus" onchange="filterProducts()">
+                            <option value="">Todos los estados</option>
+                            <option value="BAJO">⚠️ Stock Bajo</option>
+                            <option value="OK">✓ OK</option>
+                            <option value="SOBRE">📊 Sobrestock</option>
                         </select>
                     </div>
                 </div>
@@ -654,71 +811,81 @@
                                 <th>Código</th>
                                 <th>Producto</th>
                                 <th>Categoría</th>
-                                <th>Stock Actual</th>
-                                <th>Stock Mínimo</th>
-                                <th>Stock Máximo</th>
+                                <th>Stock</th>
+                                <th>Mínimo</th>
+                                <th>Máximo</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="inventoryTableBody">
-                            <!-- Dynamic content -->
-                        </tbody>
+                        <tbody id="inventoryTableBody"></tbody>
                     </table>
                 </div>
+                <div class="pagination" id="pagination"></div>
             </div>
 
             <!-- Alerts Tab -->
             <div id="alerts-tab" class="tab-content">
-                <h2 style="margin-bottom: 2rem;">Centro de Alertas</h2>
-                <div id="alertsContainer">
-                    <!-- Dynamic alerts -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="font-size: 1.25rem;">Centro de Alertas</h2>
                 </div>
+                
+                <!-- Alert Summary -->
+                <div class="summary-grid" id="alertSummary"></div>
+                
+                <!-- Alert Filters -->
+                <div class="filter-pills" id="alertFilters"></div>
+                
+                <!-- Alerts List -->
+                <div id="alertsContainer"></div>
             </div>
 
             <!-- Reports Tab -->
             <div id="reports-tab" class="tab-content">
-                <h2 style="margin-bottom: 2rem;">Reportes y Análisis</h2>
-                <div class="form-grid" style="margin-bottom: 2rem;">
-                    <div class="form-group">
-                        <label>Período</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="font-size: 1.25rem;">Reportes y Análisis</h2>
+                    <div style="display: flex; gap: 0.75rem;">
                         <select id="reportPeriod" onchange="updateReports()">
-                            <option value="week">Última Semana</option>
-                            <option value="month" selected>Último Mes</option>
-                            <option value="quarter">Último Trimestre</option>
-                            <option value="year">Último Año</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Tipo de Reporte</label>
-                        <select id="reportType" onchange="updateReports()">
-                            <option value="stock">Movimientos de Stock</option>
-                            <option value="categories">Por Categorías</option>
-                            <option value="value">Valor de Inventario</option>
+                            <option value="all">Todos los datos</option>
                         </select>
                     </div>
                 </div>
-                <div id="reportContent">
-                    <!-- Dynamic reports -->
+                
+                <div class="chart-grid">
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary);">📊 Stock por Categoría</h3>
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary);">🎯 Estado del Inventario</h3>
+                        <canvas id="statusChart"></canvas>
+                    </div>
                 </div>
+                
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary);">📈 Top 10 Productos por Stock</h3>
+                    <canvas id="topProductsChart"></canvas>
+                </div>
+
+                <div id="reportSummary" style="margin-top: 1.5rem;"></div>
             </div>
 
             <!-- Categories Tab -->
             <div id="categories-tab" class="tab-content">
-                <h2 style="margin-bottom: 2rem;">Gestión de Categorías</h2>
-                <div class="form-grid">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="font-size: 1.25rem;">Gestión de Categorías</h2>
+                </div>
+                <div class="form-grid" style="max-width: 500px;">
                     <div class="form-group">
                         <label>Nueva Categoría</label>
                         <input type="text" id="newCategory" placeholder="Nombre de la categoría">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
-                        <button class="btn btn-primary" onclick="addCategory()">Agregar Categoría</button>
+                        <button class="btn btn-primary" onclick="addCategory()">Agregar</button>
                     </div>
                 </div>
-                <div id="categoriesList" style="margin-top: 2rem;">
-                    <!-- Dynamic categories -->
-                </div>
+                <div id="categoriesList" style="margin-top: 1.5rem;"></div>
             </div>
         </div>
     </div>
@@ -732,216 +899,364 @@
             </div>
 
             <div id="importStep1">
-                <h3 style="margin-bottom: 1rem;">Selecciona el método de importación:</h3>
                 <div class="import-options">
                     <div class="import-option" onclick="showExcelImport()">
                         <div class="import-option-icon">📊</div>
-                        <div class="import-option-content">
+                        <div>
                             <h3>Desde Excel/CSV</h3>
-                            <p>Sube tu archivo Excel (.xlsx, .xls) o CSV</p>
+                            <p>Sube tu archivo .xlsx, .xls o .csv</p>
                         </div>
                     </div>
                     <div class="import-option" onclick="showTextImport()">
                         <div class="import-option-icon">📝</div>
-                        <div class="import-option-content">
+                        <div>
                             <h3>Copiar y Pegar</h3>
-                            <p>Pega tus datos desde Excel o cualquier tabla</p>
+                            <p>Pega datos desde Excel directamente</p>
                         </div>
                     </div>
                     <div class="import-option" onclick="showJsonImport()">
                         <div class="import-option-icon">💾</div>
-                        <div class="import-option-content">
+                        <div>
                             <h3>Importar JSON</h3>
-                            <p>Para importar respaldos o datos estructurados</p>
+                            <p>Para respaldos o datos estructurados</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Excel/CSV Import -->
             <div id="excelImportStep" style="display: none;">
-                <button class="btn btn-secondary" onclick="backToImportOptions()" style="margin-bottom: 1rem;">
-                    ← Volver
-                </button>
-                <h3 style="margin-bottom: 1rem;">Subir archivo Excel o CSV</h3>
+                <button class="btn btn-secondary" onclick="backToImportOptions()" style="margin-bottom: 1rem;">← Volver</button>
                 <div class="info-box">
                     <strong>📋 Formato esperado:</strong><br>
-                    Código | Producto | Categoría | Stock | Mínimo | Máximo<br>
-                    <small>El archivo debe tener estas columnas en cualquier orden</small>
+                    Código | Producto | Categoría | Stock | Mínimo | Máximo
                 </div>
-                <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
-                    <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 0.5rem;">
-                        Haz clic o arrastra tu archivo aquí
-                    </p>
-                    <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                        Soporta: .xlsx, .xls, .csv
-                    </p>
+                <div class="file-upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📁</div>
+                    <p style="color: var(--text-primary); font-weight: 600;">Haz clic o arrastra tu archivo</p>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem;">.xlsx, .xls, .csv</p>
                 </div>
                 <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
                 <div id="filePreview"></div>
             </div>
 
-            <!-- Text Import -->
             <div id="textImportStep" style="display: none;">
-                <button class="btn btn-secondary" onclick="backToImportOptions()" style="margin-bottom: 1rem;">
-                    ← Volver
-                </button>
-                <h3 style="margin-bottom: 1rem;">Copiar y Pegar desde Excel</h3>
+                <button class="btn btn-secondary" onclick="backToImportOptions()" style="margin-bottom: 1rem;">← Volver</button>
                 <div class="info-box">
-                    <strong>📋 Instrucciones:</strong><br>
-                    1. Selecciona tus datos en Excel (incluye encabezados)<br>
-                    2. Copia (Ctrl+C o Cmd+C)<br>
-                    3. Pega aquí abajo<br>
-                    <br>
-                    <strong>Formato:</strong> Código, Producto, Categoría, Stock, Mínimo, Máximo
+                    <strong>📋 Instrucciones:</strong> Copia tus datos desde Excel (incluye encabezados) y pégalos aquí.
                 </div>
                 <textarea id="pasteArea" placeholder="Código	Producto	Categoría	Stock	Mínimo	Máximo
-111000	CHICKEN TENDER	APANADOS	735	225	760
-111001	CRISPETAS POLLO	APANADOS	334	249	545"></textarea>
-                <button class="btn btn-primary" onclick="processTextImport()" style="width: 100%; margin-top: 1rem;">
-                    ✅ Importar Datos
-                </button>
+111000	CHICKEN TENDER	APANADOS	735	225	760"></textarea>
+                <button class="btn btn-primary" onclick="processTextImport()" style="width: 100%; margin-top: 1rem;">✅ Importar Datos</button>
             </div>
 
-            <!-- JSON Import -->
             <div id="jsonImportStep" style="display: none;">
-                <button class="btn btn-secondary" onclick="backToImportOptions()" style="margin-bottom: 1rem;">
-                    ← Volver
-                </button>
-                <h3 style="margin-bottom: 1rem;">Importar desde JSON</h3>
+                <button class="btn btn-secondary" onclick="backToImportOptions()" style="margin-bottom: 1rem;">← Volver</button>
                 <div class="info-box">
                     <strong>📋 Formato JSON:</strong><br>
-                    <code>[{code: "111000", name: "...", category: "...", stock: 100, min: 50, max: 200}]</code>
+                    <code>[{"code": "111000", "name": "...", "category": "...", "stock": 100, "min": 50, "max": 200}]</code>
                 </div>
-                <textarea id="jsonArea" placeholder='[
-  {
-    "code": "111000",
-    "name": "CHICKEN TENDER CON PANKO",
-    "category": "APANADOS",
-    "stock": 735,
-    "min": 225,
-    "max": 760
-  }
-]'></textarea>
-                <button class="btn btn-primary" onclick="processJsonImport()" style="width: 100%; margin-top: 1rem;">
-                    ✅ Importar JSON
-                </button>
+                <textarea id="jsonArea" placeholder='[{"code": "111000", "name": "PRODUCTO", "category": "CATEGORIA", "stock": 100, "min": 50, "max": 200}]'></textarea>
+                <button class="btn btn-primary" onclick="processJsonImport()" style="width: 100%; margin-top: 1rem;">✅ Importar JSON</button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Agregar Producto</h2>
+                <button class="modal-close" onclick="closeAddProductModal()">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Código *</label>
+                    <input type="text" id="prodCode" placeholder="Ej: 111000">
+                </div>
+                <div class="form-group">
+                    <label>Categoría *</label>
+                    <select id="prodCategory"></select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label>Nombre del Producto *</label>
+                <input type="text" id="prodName" placeholder="Ej: CHICKEN TENDER CON PANKO">
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Stock Actual *</label>
+                    <input type="number" id="prodStock" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Stock Mínimo *</label>
+                    <input type="number" id="prodMin" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Stock Máximo *</label>
+                    <input type="number" id="prodMax" placeholder="0" min="0">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveNewProduct()" style="width: 100%; margin-top: 1rem;">💾 Guardar Producto</button>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="editProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Editar Producto</h2>
+                <button class="modal-close" onclick="closeEditProductModal()">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Código</label>
+                    <input type="text" id="editProdCode" readonly style="opacity: 0.7;">
+                </div>
+                <div class="form-group">
+                    <label>Categoría *</label>
+                    <select id="editProdCategory"></select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label>Nombre del Producto *</label>
+                <input type="text" id="editProdName">
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Stock Actual *</label>
+                    <input type="number" id="editProdStock" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Stock Mínimo *</label>
+                    <input type="number" id="editProdMin" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Stock Máximo *</label>
+                    <input type="number" id="editProdMax" min="0">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveEditProduct()" style="width: 100%; margin-top: 1rem;">💾 Guardar Cambios</button>
+        </div>
+    </div>
+
     <script>
-        // Initialize storage and data
+        // =====================================================
+        // DATABASE - IndexedDB for large datasets
+        // =====================================================
+        const DB_NAME = 'TurkyInventoryDB';
+        const DB_VERSION = 1;
+        let db = null;
+
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    
+                    if (!database.objectStoreNames.contains('products')) {
+                        const store = database.createObjectStore('products', { keyPath: 'code' });
+                        store.createIndex('category', 'category', { unique: false });
+                        store.createIndex('status', 'status', { unique: false });
+                    }
+                    
+                    if (!database.objectStoreNames.contains('categories')) {
+                        database.createObjectStore('categories', { keyPath: 'name' });
+                    }
+                    
+                    if (!database.objectStoreNames.contains('settings')) {
+                        database.createObjectStore('settings', { keyPath: 'key' });
+                    }
+                };
+            });
+        }
+
+        // Generic DB operations
+        async function dbGet(storeName, key) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.get(key);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function dbGetAll(storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function dbPut(storeName, data) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.put(data);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function dbDelete(storeName, key) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.delete(key);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function dbClear(storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.clear();
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function dbBulkPut(storeName, items) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                
+                items.forEach(item => store.put(item));
+                
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        // =====================================================
+        // DATA STATE
+        // =====================================================
         let inventory = [];
-        let categories = ['APANADOS', 'ACEITES', 'BEBIDAS', 'CARNES FRIAS', 'CONFITERIA', 'ESPECIALES', 'FRUTAS', 'MAQUILA', 'POLLO APANADO', 'SALSAS'];
-        let lines = ['TURKY', 'AJUSTES PRECIO', 'IMPORTADOS', 'MP INSUMOS Y EMPAQUES', 'NACIONALES', 'SERVICIOS'];
-        let revisions = ['AUMENTAR STOCK', 'OK', 'SOBRESTOCK'];
-        
-        // Load initial data from uploaded spreadsheet
-        async function initializeData() {
-            // Check if we have stored data
+        let categories = ['APANADOS', 'ACEITES', 'BEBIDAS', 'CARNES FRIAS', 'CONFITERIA', 'ESPECIALES', 'FRUTAS', 'MAQUILA', 'POLLO APANADO', 'SALSAS', 'GRANEL', 'LACTEOS', 'VERDURAS'];
+        let currentPage = 1;
+        let itemsPerPage = 50;
+        let filteredInventory = [];
+        let currentAlertFilter = 'all';
+
+        // Charts
+        let categoryChart = null;
+        let statusChart = null;
+        let topProductsChart = null;
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+        async function initializeApp() {
             try {
-                const stored = await window.storage.get('inventory-data');
-                if (stored && stored.value) {
-                    const data = JSON.parse(stored.value);
-                    inventory = data.inventory || [];
-                    categories = data.categories || categories;
-                } else {
-                    // Initialize with sample data from the spreadsheet
-                    inventory = generateSampleData();
-                    await saveData();
+                await initDB();
+                document.getElementById('storageStatus').textContent = 'IndexedDB Activo';
+                
+                // Load data
+                const storedProducts = await dbGetAll('products');
+                const storedCategories = await dbGetAll('categories');
+                
+                if (storedProducts.length > 0) {
+                    inventory = storedProducts;
                 }
-            } catch (e) {
-                console.log('Initializing with sample data');
-                inventory = generateSampleData();
-                await saveData();
-            }
-            
-            updateDashboard();
-            renderInventoryTable();
-            renderAlerts();
-            renderCategories();
-            populateCategoryFilter();
-        }
-
-        function generateSampleData() {
-            const products = [
-                { code: '111000', name: 'CHICKEN TENDER CON PANKO x300G-TURKY', category: 'APANADOS', stock: 735, min: 225, max: 760 },
-                { code: '111001', name: 'CHICKEN TENDER CON PANKO x1KG-TURKY', category: 'APANADOS', stock: 334, min: 249, max: 545 },
-                { code: '111003', name: 'CRISPETAS POLLO CON PANKO x1KG-TURKY', category: 'APANADOS', stock: 134, min: 79, max: 299 },
-                { code: '111004', name: 'CRISPETAS POLLO CON PANKO x500G-TURKY', category: 'APANADOS', stock: 45, min: 16, max: 100 },
-                { code: '111006', name: 'CUBOS POLLO CON PANKO x1KG-TURKY', category: 'APANADOS', stock: 208, min: 229, max: 393 },
-                { code: '111007', name: 'CUBOS POLLO CON PANKO x300G-TURKY', category: 'APANADOS', stock: 467, min: 417, max: 651 },
-                { code: '111009', name: 'FILETE PECHUGA CON PANKO x1.25KG-TURKY', category: 'APANADOS', stock: 31, min: 21, max: 97 },
-                { code: '111010', name: 'FILETE PECHUGA CON PANKO x1KG/10-TURKY', category: 'APANADOS', stock: 107, min: 117, max: 218 }
-            ];
-            
-            return products.map(p => ({
-                ...p,
-                line: lines[Math.floor(Math.random() * lines.length)],
-                revision: p.stock < p.min ? 'AUMENTAR STOCK' : (p.stock > p.max ? 'SOBRESTOCK' : 'OK'),
-                lastUpdated: new Date().toISOString()
-            }));
-        }
-
-        async function saveData() {
-            try {
-                await window.storage.set('inventory-data', JSON.stringify({
-                    inventory,
-                    categories,
-                    lastUpdate: new Date().toISOString()
-                }));
-            } catch (e) {
-                console.error('Error saving data:', e);
+                
+                if (storedCategories.length > 0) {
+                    categories = storedCategories.map(c => c.name);
+                } else {
+                    // Save default categories
+                    await dbBulkPut('categories', categories.map(name => ({ name })));
+                }
+                
+                filteredInventory = [...inventory];
+                
+                updateDashboard();
+                renderInventoryTable();
+                renderAlerts();
+                renderCategories();
+                populateCategoryFilter();
+                initCharts();
+                
+            } catch (error) {
+                console.error('Error initializing:', error);
+                document.getElementById('storageStatus').textContent = 'Error BD';
+                document.querySelector('.storage-dot').style.background = 'var(--accent-danger)';
             }
         }
 
+        // =====================================================
+        // DASHBOARD
+        // =====================================================
         function updateDashboard() {
-            // Total products
-            document.getElementById('totalProducts').textContent = inventory.length;
+            document.getElementById('totalProducts').textContent = inventory.length.toLocaleString();
+            document.getElementById('productsChange').textContent = `${inventory.length} registros`;
             
-            // Alerts
-            const alerts = inventory.filter(p => p.revision !== 'OK');
-            document.getElementById('totalAlerts').textContent = alerts.length;
-            const critical = alerts.filter(p => p.stock < p.min).length;
-            document.getElementById('alertsInfo').textContent = `${critical} críticas`;
+            const lowStock = inventory.filter(p => p.stock < p.min);
+            const overStock = inventory.filter(p => p.stock > p.max);
+            const alerts = lowStock.length + overStock.length;
             
-            // Total stock
-            const totalStock = inventory.reduce((sum, p) => sum + p.stock, 0);
+            document.getElementById('totalAlerts').textContent = alerts;
+            document.getElementById('alertsInfo').textContent = `${lowStock.length} críticas`;
+            document.getElementById('alertsInfo').className = 'stat-change ' + (lowStock.length > 0 ? 'negative' : 'positive');
+            
+            const totalStock = inventory.reduce((sum, p) => sum + (p.stock || 0), 0);
             document.getElementById('totalStock').textContent = totalStock.toLocaleString();
-            document.getElementById('stockInfo').textContent = 'unidades';
             
-            // Value (simulated)
-            const value = totalStock * 15; // Average price per unit
+            const avgPrice = 15;
+            const value = totalStock * avgPrice;
             document.getElementById('inventoryValue').textContent = '$' + value.toLocaleString();
+        }
+
+        // =====================================================
+        // INVENTORY TABLE
+        // =====================================================
+        function getProductStatus(product) {
+            if (product.stock < product.min) return 'BAJO';
+            if (product.stock > product.max) return 'SOBRE';
+            return 'OK';
         }
 
         function renderInventoryTable() {
             const tbody = document.getElementById('inventoryTableBody');
             
-            if (inventory.length === 0) {
+            if (filteredInventory.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="8">
                             <div class="empty-state">
                                 <div class="empty-state-icon">📦</div>
-                                <h3>No hay productos en el inventario</h3>
-                                <p>Comienza agregando tu primer producto</p>
+                                <h3>No hay productos</h3>
+                                <p>Importa datos o agrega productos manualmente</p>
                             </div>
                         </td>
                     </tr>
                 `;
+                document.getElementById('pagination').innerHTML = '';
                 return;
             }
             
-            tbody.innerHTML = inventory.map(product => {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageItems = filteredInventory.slice(start, end);
+            
+            tbody.innerHTML = pageItems.map(product => {
+                const status = getProductStatus(product);
                 let statusBadge = '';
-                if (product.stock < product.min) {
-                    statusBadge = '<span class="badge badge-danger">⚠️ Stock Bajo</span>';
-                } else if (product.stock > product.max) {
-                    statusBadge = '<span class="badge badge-warning">📊 Sobrestock</span>';
+                
+                if (status === 'BAJO') {
+                    statusBadge = '<span class="badge badge-danger">⚠️ Bajo</span>';
+                } else if (status === 'SOBRE') {
+                    statusBadge = '<span class="badge badge-warning">📊 Sobre</span>';
                 } else {
                     statusBadge = '<span class="badge badge-success">✓ OK</span>';
                 }
@@ -950,10 +1265,10 @@
                     <tr>
                         <td><code style="color: var(--accent-primary);">${product.code}</code></td>
                         <td><strong>${product.name}</strong></td>
-                        <td><span class="badge badge-info">${product.category}</span></td>
-                        <td><strong>${product.stock}</strong></td>
-                        <td>${product.min}</td>
-                        <td>${product.max}</td>
+                        <td><span class="badge badge-info">${product.category || '-'}</span></td>
+                        <td><strong>${(product.stock || 0).toLocaleString()}</strong></td>
+                        <td>${(product.min || 0).toLocaleString()}</td>
+                        <td>${(product.max || 0).toLocaleString()}</td>
                         <td>${statusBadge}</td>
                         <td>
                             <span class="action-icon" onclick="editProduct('${product.code}')" title="Editar">✏️</span>
@@ -962,300 +1277,535 @@
                     </tr>
                 `;
             }).join('');
+            
+            renderPagination();
         }
 
-        function renderAlerts() {
-            const container = document.getElementById('alertsContainer');
-            const alerts = inventory.filter(p => p.revision !== 'OK');
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
+            const pagination = document.getElementById('pagination');
             
-            if (alerts.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">✅</div>
-                        <h3>¡Todo en orden!</h3>
-                        <p>No hay alertas activas en este momento</p>
-                    </div>
-                `;
+            if (totalPages <= 1) {
+                pagination.innerHTML = `<span class="pagination-info">${filteredInventory.length} productos</span>`;
                 return;
             }
             
-            const lowStock = alerts.filter(p => p.stock < p.min);
-            const overStock = alerts.filter(p => p.stock > p.max);
+            let html = `<button onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>«</button>`;
+            html += `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
             
-            let html = '';
+            const maxVisible = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
             
-            if (lowStock.length > 0) {
-                html += '<h3 style="color: var(--accent-danger); margin-bottom: 1rem;">🚨 Stock Bajo</h3>';
-                lowStock.forEach(p => {
-                    html += `
-                        <div class="alert alert-danger">
-                            <div>
-                                <strong>${p.name}</strong> (${p.code})<br>
-                                <small>Stock actual: ${p.stock} | Mínimo requerido: ${p.min} | Faltan: ${p.min - p.stock} unidades</small>
-                            </div>
-                            <button class="btn btn-primary" onclick="quickUpdate('${p.code}', ${p.min + 50})">Reabastecer</button>
-                        </div>
-                    `;
-                });
+            if (endPage - startPage < maxVisible - 1) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
             }
             
-            if (overStock.length > 0) {
-                html += '<h3 style="color: var(--accent-warning); margin: 2rem 0 1rem;">📊 Sobrestock</h3>';
-                overStock.forEach(p => {
-                    html += `
-                        <div class="alert alert-warning">
-                            <div>
-                                <strong>${p.name}</strong> (${p.code})<br>
-                                <small>Stock actual: ${p.stock} | Máximo: ${p.max} | Exceso: ${p.stock - p.max} unidades</small>
-                            </div>
-                        </div>
-                    `;
-                });
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
             }
             
-            container.innerHTML = html;
+            html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>›</button>`;
+            html += `<button onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>»</button>`;
+            html += `<span class="pagination-info">${filteredInventory.length} productos</span>`;
+            
+            pagination.innerHTML = html;
         }
 
-        function renderCategories() {
-            const container = document.getElementById('categoriesList');
-            container.innerHTML = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-                    ${categories.map(cat => {
-                        const count = inventory.filter(p => p.category === cat).length;
-                        return `
-                            <div class="stat-card">
-                                <div class="stat-label">${cat}</div>
-                                <div class="stat-value" style="font-size: 2rem;">${count}</div>
-                                <div style="font-size: 0.85rem; color: var(--text-secondary);">productos</div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-        }
-
-        function populateCategoryFilter() {
-            const select = document.getElementById('filterCategory');
-            select.innerHTML = '<option value="">Todas las categorías</option>' +
-                categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        function goToPage(page) {
+            currentPage = page;
+            renderInventoryTable();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function filterProducts() {
             const search = document.getElementById('searchProduct').value.toLowerCase();
             const category = document.getElementById('filterCategory').value;
+            const status = document.getElementById('filterStatus').value;
             
-            const filtered = inventory.filter(p => {
+            filteredInventory = inventory.filter(p => {
                 const matchSearch = !search || 
-                    p.name.toLowerCase().includes(search) || 
-                    p.code.toLowerCase().includes(search);
+                    (p.name && p.name.toLowerCase().includes(search)) || 
+                    (p.code && p.code.toLowerCase().includes(search));
                 const matchCategory = !category || p.category === category;
-                return matchSearch && matchCategory;
+                const matchStatus = !status || getProductStatus(p) === status;
+                return matchSearch && matchCategory && matchStatus;
             });
             
-            const tbody = document.getElementById('inventoryTableBody');
-            tbody.innerHTML = filtered.map(product => {
-                let statusBadge = '';
-                if (product.stock < product.min) {
-                    statusBadge = '<span class="badge badge-danger">⚠️ Stock Bajo</span>';
-                } else if (product.stock > product.max) {
-                    statusBadge = '<span class="badge badge-warning">📊 Sobrestock</span>';
-                } else {
-                    statusBadge = '<span class="badge badge-success">✓ OK</span>';
-                }
+            currentPage = 1;
+            renderInventoryTable();
+        }
+
+        // =====================================================
+        // ALERTS
+        // =====================================================
+        function renderAlerts() {
+            const lowStock = inventory.filter(p => p.stock < p.min);
+            const overStock = inventory.filter(p => p.stock > p.max);
+            const okStock = inventory.filter(p => p.stock >= p.min && p.stock <= p.max);
+            
+            // Summary Cards
+            document.getElementById('alertSummary').innerHTML = `
+                <div class="summary-card danger">
+                    <div class="value">${lowStock.length}</div>
+                    <div class="label">Stock Bajo</div>
+                </div>
+                <div class="summary-card warning">
+                    <div class="value">${overStock.length}</div>
+                    <div class="label">Sobrestock</div>
+                </div>
+                <div class="summary-card success">
+                    <div class="value">${okStock.length}</div>
+                    <div class="label">OK</div>
+                </div>
+            `;
+            
+            // Filter Pills
+            document.getElementById('alertFilters').innerHTML = `
+                <div class="filter-pill ${currentAlertFilter === 'all' ? 'active' : ''}" onclick="setAlertFilter('all')">
+                    🔔 Todas <span class="count">${lowStock.length + overStock.length}</span>
+                </div>
+                <div class="filter-pill ${currentAlertFilter === 'low' ? 'active' : ''}" onclick="setAlertFilter('low')">
+                    ⚠️ Stock Bajo <span class="count">${lowStock.length}</span>
+                </div>
+                <div class="filter-pill ${currentAlertFilter === 'over' ? 'active' : ''}" onclick="setAlertFilter('over')">
+                    📊 Sobrestock <span class="count">${overStock.length}</span>
+                </div>
+            `;
+            
+            // Alerts List
+            const container = document.getElementById('alertsContainer');
+            let alertsToShow = [];
+            
+            if (currentAlertFilter === 'all' || currentAlertFilter === 'low') {
+                alertsToShow = alertsToShow.concat(lowStock.map(p => ({ ...p, type: 'low' })));
+            }
+            if (currentAlertFilter === 'all' || currentAlertFilter === 'over') {
+                alertsToShow = alertsToShow.concat(overStock.map(p => ({ ...p, type: 'over' })));
+            }
+            
+            if (alertsToShow.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <h3>¡Todo en orden!</h3>
+                        <p>No hay alertas en esta categoría</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort: low stock first (more critical)
+            alertsToShow.sort((a, b) => {
+                if (a.type === 'low' && b.type !== 'low') return -1;
+                if (a.type !== 'low' && b.type === 'low') return 1;
+                return 0;
+            });
+            
+            container.innerHTML = alertsToShow.slice(0, 100).map(p => {
+                const isLow = p.type === 'low';
+                const diff = isLow ? (p.min - p.stock) : (p.stock - p.max);
                 
                 return `
-                    <tr>
-                        <td><code style="color: var(--accent-primary);">${product.code}</code></td>
-                        <td><strong>${product.name}</strong></td>
-                        <td><span class="badge badge-info">${product.category}</span></td>
-                        <td><strong>${product.stock}</strong></td>
-                        <td>${product.min}</td>
-                        <td>${product.max}</td>
-                        <td>${statusBadge}</td>
-                        <td>
-                            <span class="action-icon" onclick="editProduct('${product.code}')" title="Editar">✏️</span>
-                            <span class="action-icon" onclick="deleteProduct('${product.code}')" title="Eliminar">🗑️</span>
-                        </td>
-                    </tr>
+                    <div class="alert ${isLow ? 'alert-danger' : 'alert-warning'}">
+                        <div>
+                            <strong style="color: ${isLow ? 'var(--accent-danger)' : 'var(--accent-warning)'};">${p.name}</strong> 
+                            <span style="color: var(--text-secondary);">(${p.code})</span><br>
+                            <small style="color: var(--text-secondary);">
+                                Stock: <strong>${p.stock}</strong> | 
+                                ${isLow ? `Mínimo: ${p.min} | Faltan: ${diff}` : `Máximo: ${p.max} | Exceso: ${diff}`} unidades
+                            </small>
+                        </div>
+                        ${isLow ? `<button class="btn btn-primary" onclick="quickRestock('${p.code}')">Reabastecer</button>` : ''}
+                    </div>
                 `;
             }).join('');
+            
+            if (alertsToShow.length > 100) {
+                container.innerHTML += `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">... y ${alertsToShow.length - 100} más</p>`;
+            }
         }
 
-        function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(tabName + '-tab').classList.add('active');
-            
-            // Refresh content if needed
-            if (tabName === 'alerts') renderAlerts();
-            if (tabName === 'reports') updateReports();
-            if (tabName === 'categories') renderCategories();
+        function setAlertFilter(filter) {
+            currentAlertFilter = filter;
+            renderAlerts();
         }
 
+        async function quickRestock(code) {
+            const product = inventory.find(p => p.code === code);
+            if (!product) return;
+            
+            const newStock = product.min + Math.ceil((product.max - product.min) / 2);
+            product.stock = newStock;
+            product.lastUpdated = new Date().toISOString();
+            
+            await dbPut('products', product);
+            updateDashboard();
+            renderAlerts();
+            renderInventoryTable();
+            updateCharts();
+        }
+
+        // =====================================================
+        // REPORTS & CHARTS
+        // =====================================================
+        function initCharts() {
+            const ctxCategory = document.getElementById('categoryChart');
+            const ctxStatus = document.getElementById('statusChart');
+            const ctxTop = document.getElementById('topProductsChart');
+            
+            if (!ctxCategory || !ctxStatus || !ctxTop) return;
+            
+            // Category Chart
+            categoryChart = new Chart(ctxCategory, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Stock Total',
+                        data: [],
+                        backgroundColor: 'rgba(0, 212, 255, 0.6)',
+                        borderColor: 'rgba(0, 212, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8', maxRotation: 45 },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+            
+            // Status Chart
+            statusChart = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Stock Bajo', 'OK', 'Sobrestock'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', padding: 20 }
+                        }
+                    }
+                }
+            });
+            
+            // Top Products Chart
+            topProductsChart = new Chart(ctxTop, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Stock',
+                        data: [],
+                        backgroundColor: 'rgba(124, 58, 237, 0.6)',
+                        borderColor: 'rgba(124, 58, 237, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+            
+            updateCharts();
+        }
+
+        function updateCharts() {
+            if (!categoryChart || !statusChart || !topProductsChart) return;
+            
+            // Category data
+            const categoryData = {};
+            inventory.forEach(p => {
+                const cat = p.category || 'Sin categoría';
+                categoryData[cat] = (categoryData[cat] || 0) + (p.stock || 0);
+            });
+            
+            const sortedCategories = Object.entries(categoryData)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            categoryChart.data.labels = sortedCategories.map(c => c[0]);
+            categoryChart.data.datasets[0].data = sortedCategories.map(c => c[1]);
+            categoryChart.update();
+            
+            // Status data
+            const lowStock = inventory.filter(p => p.stock < p.min).length;
+            const overStock = inventory.filter(p => p.stock > p.max).length;
+            const okStock = inventory.length - lowStock - overStock;
+            
+            statusChart.data.datasets[0].data = [lowStock, okStock, overStock];
+            statusChart.update();
+            
+            // Top products
+            const topProducts = [...inventory]
+                .sort((a, b) => (b.stock || 0) - (a.stock || 0))
+                .slice(0, 10);
+            
+            topProductsChart.data.labels = topProducts.map(p => 
+                p.name && p.name.length > 30 ? p.name.substring(0, 30) + '...' : (p.name || 'N/A')
+            );
+            topProductsChart.data.datasets[0].data = topProducts.map(p => p.stock || 0);
+            topProductsChart.update();
+            
+            // Report Summary
+            renderReportSummary();
+        }
+
+        function renderReportSummary() {
+            const totalStock = inventory.reduce((sum, p) => sum + (p.stock || 0), 0);
+            const avgStock = inventory.length > 0 ? Math.round(totalStock / inventory.length) : 0;
+            const lowStock = inventory.filter(p => p.stock < p.min);
+            const overStock = inventory.filter(p => p.stock > p.max);
+            
+            document.getElementById('reportSummary').innerHTML = `
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary);">📋 Resumen General</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <div class="value" style="color: var(--accent-primary);">${inventory.length}</div>
+                            <div class="label">Productos</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="value" style="color: var(--accent-primary);">${totalStock.toLocaleString()}</div>
+                            <div class="label">Stock Total</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="value" style="color: var(--accent-primary);">${avgStock.toLocaleString()}</div>
+                            <div class="label">Promedio por Producto</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="value" style="color: var(--accent-primary);">${categories.length}</div>
+                            <div class="label">Categorías</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateReports() {
+            updateCharts();
+        }
+
+        // =====================================================
+        // CATEGORIES
+        // =====================================================
+        function renderCategories() {
+            const container = document.getElementById('categoriesList');
+            
+            const categoryStats = categories.map(cat => {
+                const products = inventory.filter(p => p.category === cat);
+                const stock = products.reduce((sum, p) => sum + (p.stock || 0), 0);
+                return { name: cat, count: products.length, stock };
+            }).sort((a, b) => b.count - a.count);
+            
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
+                    ${categoryStats.map(cat => `
+                        <div class="stat-card" style="padding: 1rem;">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">${cat.name}</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-primary); font-family: 'JetBrains Mono', monospace;">${cat.count}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">${cat.stock.toLocaleString()} unidades</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function populateCategoryFilter() {
+            const selects = ['filterCategory', 'prodCategory', 'editProdCategory'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    const currentValue = select.value;
+                    select.innerHTML = (id === 'filterCategory' ? '<option value="">Todas las categorías</option>' : '') +
+                        categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                    if (currentValue) select.value = currentValue;
+                }
+            });
+        }
+
+        async function addCategory() {
+            const input = document.getElementById('newCategory');
+            const name = input.value.trim().toUpperCase();
+            
+            if (!name) {
+                alert('⚠️ Ingresa un nombre');
+                return;
+            }
+            
+            if (categories.includes(name)) {
+                alert('⚠️ Esta categoría ya existe');
+                return;
+            }
+            
+            categories.push(name);
+            await dbPut('categories', { name });
+            
+            input.value = '';
+            renderCategories();
+            populateCategoryFilter();
+            alert('✅ Categoría agregada');
+        }
+
+        // =====================================================
+        // PRODUCT CRUD
+        // =====================================================
         function showAddProductModal() {
-            const code = prompt('Código del producto:');
-            if (!code) return;
+            populateCategoryFilter();
+            document.getElementById('addProductModal').classList.add('active');
+        }
+
+        function closeAddProductModal() {
+            document.getElementById('addProductModal').classList.remove('active');
+            // Clear form
+            ['prodCode', 'prodName', 'prodStock', 'prodMin', 'prodMax'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+        }
+
+        async function saveNewProduct() {
+            const code = document.getElementById('prodCode').value.trim();
+            const name = document.getElementById('prodName').value.trim();
+            const category = document.getElementById('prodCategory').value;
+            const stock = parseInt(document.getElementById('prodStock').value) || 0;
+            const min = parseInt(document.getElementById('prodMin').value) || 0;
+            const max = parseInt(document.getElementById('prodMax').value) || 0;
             
-            const name = prompt('Nombre del producto:');
-            if (!name) return;
+            if (!code || !name || !category) {
+                alert('⚠️ Completa los campos obligatorios');
+                return;
+            }
             
-            const category = prompt('Categoría:\n' + categories.join(', '));
-            if (!category) return;
+            if (inventory.find(p => p.code === code)) {
+                alert('⚠️ Ya existe un producto con este código');
+                return;
+            }
             
-            const stock = parseInt(prompt('Stock actual:'));
-            const min = parseInt(prompt('Stock mínimo:'));
-            const max = parseInt(prompt('Stock máximo:'));
-            
-            const newProduct = {
-                code,
-                name,
-                category,
-                stock,
-                min,
-                max,
-                line: lines[0],
-                revision: stock < min ? 'AUMENTAR STOCK' : (stock > max ? 'SOBRESTOCK' : 'OK'),
+            const product = {
+                code, name, category, stock, min, max,
                 lastUpdated: new Date().toISOString()
             };
             
-            inventory.push(newProduct);
-            saveData();
+            inventory.push(product);
+            await dbPut('products', product);
+            
+            filteredInventory = [...inventory];
             updateDashboard();
             renderInventoryTable();
-            alert('✅ Producto agregado exitosamente');
+            renderAlerts();
+            renderCategories();
+            updateCharts();
+            closeAddProductModal();
+            alert('✅ Producto agregado');
         }
 
         function editProduct(code) {
             const product = inventory.find(p => p.code === code);
             if (!product) return;
             
-            const newStock = parseInt(prompt(`Nuevo stock para ${product.name}:`, product.stock));
-            if (isNaN(newStock)) return;
+            populateCategoryFilter();
+            document.getElementById('editProdCode').value = product.code;
+            document.getElementById('editProdName').value = product.name;
+            document.getElementById('editProdCategory').value = product.category;
+            document.getElementById('editProdStock').value = product.stock;
+            document.getElementById('editProdMin').value = product.min;
+            document.getElementById('editProdMax').value = product.max;
             
-            product.stock = newStock;
-            product.revision = newStock < product.min ? 'AUMENTAR STOCK' : (newStock > product.max ? 'SOBRESTOCK' : 'OK');
-            product.lastUpdated = new Date().toISOString();
-            
-            saveData();
-            updateDashboard();
-            renderInventoryTable();
-            renderAlerts();
+            document.getElementById('editProductModal').classList.add('active');
         }
 
-        function deleteProduct(code) {
-            if (!confirm('¿Estás seguro de eliminar este producto?')) return;
-            
-            inventory = inventory.filter(p => p.code !== code);
-            saveData();
-            updateDashboard();
-            renderInventoryTable();
+        function closeEditProductModal() {
+            document.getElementById('editProductModal').classList.remove('active');
         }
 
-        async function quickUpdate(code, newStock) {
+        async function saveEditProduct() {
+            const code = document.getElementById('editProdCode').value;
             const product = inventory.find(p => p.code === code);
             if (!product) return;
             
-            product.stock = newStock;
-            product.revision = newStock < product.min ? 'AUMENTAR STOCK' : (newStock > product.max ? 'SOBRESTOCK' : 'OK');
+            product.name = document.getElementById('editProdName').value.trim();
+            product.category = document.getElementById('editProdCategory').value;
+            product.stock = parseInt(document.getElementById('editProdStock').value) || 0;
+            product.min = parseInt(document.getElementById('editProdMin').value) || 0;
+            product.max = parseInt(document.getElementById('editProdMax').value) || 0;
             product.lastUpdated = new Date().toISOString();
             
-            await saveData();
+            await dbPut('products', product);
+            
+            filterProducts();
             updateDashboard();
-            renderInventoryTable();
             renderAlerts();
-            alert('✅ Stock actualizado');
-        }
-
-        function addCategory() {
-            const newCat = document.getElementById('newCategory').value.trim().toUpperCase();
-            if (!newCat) {
-                alert('⚠️ Ingresa un nombre para la categoría');
-                return;
-            }
-            
-            if (categories.includes(newCat)) {
-                alert('⚠️ Esta categoría ya existe');
-                return;
-            }
-            
-            categories.push(newCat);
-            saveData();
             renderCategories();
-            populateCategoryFilter();
-            document.getElementById('newCategory').value = '';
-            alert('✅ Categoría agregada exitosamente');
+            updateCharts();
+            closeEditProductModal();
+            alert('✅ Producto actualizado');
         }
 
-        function updateReports() {
-            const period = document.getElementById('reportPeriod').value;
-            const type = document.getElementById('reportType').value;
-            const container = document.getElementById('reportContent');
+        async function deleteProduct(code) {
+            if (!confirm('¿Eliminar este producto?')) return;
             
-            // Simple report generation
-            if (type === 'categories') {
-                const stats = categories.map(cat => {
-                    const products = inventory.filter(p => p.category === cat);
-                    const total = products.reduce((sum, p) => sum + p.stock, 0);
-                    return { category: cat, count: products.length, stock: total };
-                });
-                
-                container.innerHTML = `
-                    <div style="display: grid; gap: 1rem;">
-                        ${stats.map(s => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
-                                <div>
-                                    <strong>${s.category}</strong><br>
-                                    <small style="color: var(--text-secondary);">${s.count} productos</small>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-primary);">${s.stock}</div>
-                                    <small style="color: var(--text-secondary);">unidades</small>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📊</div>
-                        <h3>Generando reporte...</h3>
-                        <p>Esta función estará disponible próximamente</p>
-                    </div>
-                `;
-            }
-        }
-
-        function exportData() {
-            const csv = [
-                ['Código', 'Producto', 'Categoría', 'Stock', 'Mínimo', 'Máximo', 'Estado'],
-                ...inventory.map(p => [
-                    p.code, p.name, p.category, p.stock, p.min, p.max, p.revision
-                ])
-            ].map(row => row.join(',')).join('\n');
+            inventory = inventory.filter(p => p.code !== code);
+            await dbDelete('products', code);
             
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `inventario_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
+            filterProducts();
+            updateDashboard();
+            renderAlerts();
+            renderCategories();
+            updateCharts();
         }
 
-        // Import Modal Functions
+        // =====================================================
+        // IMPORT/EXPORT
+        // =====================================================
         function showImportModal() {
             document.getElementById('importModal').classList.add('active');
-            document.body.style.overflow = 'hidden';
         }
 
         function closeImportModal() {
             document.getElementById('importModal').classList.remove('active');
-            document.body.style.overflow = 'auto';
             backToImportOptions();
         }
 
@@ -1264,6 +1814,7 @@
             document.getElementById('excelImportStep').style.display = 'none';
             document.getElementById('textImportStep').style.display = 'none';
             document.getElementById('jsonImportStep').style.display = 'none';
+            document.getElementById('filePreview').innerHTML = '';
         }
 
         function showExcelImport() {
@@ -1281,292 +1832,264 @@
             document.getElementById('jsonImportStep').style.display = 'block';
         }
 
-        // Drag and drop functionality
-        const fileUploadArea = document.getElementById('fileUploadArea');
-        if (fileUploadArea) {
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                fileUploadArea.addEventListener(eventName, preventDefaults, false);
-            });
-
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                fileUploadArea.addEventListener(eventName, () => {
-                    fileUploadArea.classList.add('dragging');
-                });
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                fileUploadArea.addEventListener(eventName, () => {
-                    fileUploadArea.classList.remove('dragging');
-                });
-            });
-
-            fileUploadArea.addEventListener('drop', handleDrop);
-        }
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            if (files.length > 0) {
-                handleFileUpload({ target: { files } });
-            }
-        }
-
-        // File upload handler
         async function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-
+            
             const preview = document.getElementById('filePreview');
-            preview.innerHTML = '<div class="loading"><div class="spinner"></div><p>Procesando archivo...</p></div>';
-
+            preview.innerHTML = '<div class="loading"><div class="spinner"></div><p>Procesando...</p></div>';
+            
             try {
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
                     try {
-                        const data = e.target.result;
-                        let workbook;
+                        let products = [];
                         
                         if (file.name.endsWith('.csv')) {
-                            // Parse CSV
-                            const lines = data.split('\n');
-                            const headers = lines[0].split(/[,\t]/);
-                            const products = [];
-                            
+                            const lines = e.target.result.split('\n');
                             for (let i = 1; i < lines.length; i++) {
                                 if (!lines[i].trim()) continue;
-                                const values = lines[i].split(/[,\t]/);
-                                if (values.length >= 6) {
+                                const values = lines[i].split(/[,;]/);
+                                if (values.length >= 4) {
                                     products.push({
-                                        code: values[0]?.trim(),
-                                        name: values[1]?.trim(),
-                                        category: values[2]?.trim(),
+                                        code: values[0]?.trim() || '',
+                                        name: values[1]?.trim() || '',
+                                        category: values[2]?.trim() || '',
                                         stock: parseInt(values[3]) || 0,
                                         min: parseInt(values[4]) || 0,
                                         max: parseInt(values[5]) || 0
                                     });
                                 }
                             }
-                            
-                            processImportedData(products);
                         } else {
-                            // Parse Excel
-                            workbook = XLSX.read(data, { type: 'binary' });
-                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                            const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(sheet);
                             
-                            const products = jsonData.map(row => {
-                                // Try to find columns by various possible names
-                                const code = row['Código'] || row['Codigo'] || row['Code'] || row['CODIGO'] || '';
-                                const name = row['Producto'] || row['Product'] || row['Descripcion'] || row['PRODUCTO'] || '';
+                            products = jsonData.map(row => {
+                                const code = row['Código'] || row['Codigo'] || row['Code'] || row['CODIGO'] || row['codigo'] || '';
+                                const name = row['Producto'] || row['Descripcion'] || row['PRODUCTO'] || row['Nombre'] || row['Description'] || '';
                                 const category = row['Categoría'] || row['Categoria'] || row['Category'] || row['CATEGORIA'] || '';
-                                const stock = parseInt(row['Stock'] || row['Stock Actual'] || row['STOCK'] || 0);
+                                const stock = parseInt(row['Stock'] || row['Total'] || row['Inventario'] || row['STOCK'] || 0);
                                 const min = parseInt(row['Mínimo'] || row['Minimo'] || row['Min'] || row['MINIMO'] || 0);
                                 const max = parseInt(row['Máximo'] || row['Maximo'] || row['Max'] || row['MAXIMO'] || 0);
                                 
-                                return { code, name, category, stock, min, max };
-                            }).filter(p => p.code && p.name);
-                            
-                            processImportedData(products);
+                                return { code: String(code), name, category, stock, min, max };
+                            }).filter(p => p.code || p.name);
                         }
+                        
+                        showImportPreview(products);
                     } catch (error) {
-                        preview.innerHTML = `
-                            <div class="alert alert-danger">
-                                ❌ Error al procesar el archivo: ${error.message}
-                            </div>
-                        `;
+                        preview.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
                     }
                 };
-
+                
                 if (file.name.endsWith('.csv')) {
                     reader.readAsText(file);
                 } else {
                     reader.readAsBinaryString(file);
                 }
             } catch (error) {
-                preview.innerHTML = `
-                    <div class="alert alert-danger">
-                        ❌ Error al leer el archivo: ${error.message}
-                    </div>
-                `;
+                preview.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
             }
         }
 
-        // Process imported data
-        async function processImportedData(products) {
+        function showImportPreview(products) {
             const preview = document.getElementById('filePreview');
             
             if (products.length === 0) {
-                preview.innerHTML = `
-                    <div class="alert alert-warning">
-                        ⚠️ No se encontraron productos válidos en el archivo
-                    </div>
-                `;
+                preview.innerHTML = '<div class="alert alert-warning">⚠️ No se encontraron productos válidos</div>';
                 return;
             }
-
-            // Show preview
+            
             preview.innerHTML = `
-                <div style="margin-top: 1.5rem;">
-                    <div class="alert alert-warning">
-                        ✅ Se encontraron ${products.length} productos
-                    </div>
-                    <div style="max-height: 300px; overflow-y: auto; background: var(--bg-secondary); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <thead>
-                                <tr>
-                                    <th>Código</th>
-                                    <th>Producto</th>
-                                    <th>Stock</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${products.slice(0, 10).map(p => `
-                                    <tr>
-                                        <td><code>${p.code}</code></td>
-                                        <td>${p.name}</td>
-                                        <td>${p.stock}</td>
-                                    </tr>
-                                `).join('')}
-                                ${products.length > 10 ? `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary);">... y ${products.length - 10} más</td></tr>` : ''}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="display: flex; gap: 1rem;">
-                        <button class="btn btn-secondary" style="flex: 1;" onclick="closeImportModal()">
-                            Cancelar
-                        </button>
-                        <button class="btn btn-primary" style="flex: 1;" onclick="confirmImport(${JSON.stringify(products).replace(/"/g, '&quot;')})">
-                            ✅ Importar ${products.length} productos
-                        </button>
-                    </div>
+                <div class="alert alert-info" style="margin-top: 1rem;">
+                    ✅ ${products.length} productos encontrados
+                </div>
+                <div style="max-height: 200px; overflow-y: auto; background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem; margin: 1rem 0; font-size: 0.85rem;">
+                    <table style="width: 100%;">
+                        <thead><tr><th>Código</th><th>Producto</th><th>Stock</th></tr></thead>
+                        <tbody>
+                            ${products.slice(0, 10).map(p => `<tr><td><code>${p.code}</code></td><td>${p.name}</td><td>${p.stock}</td></tr>`).join('')}
+                            ${products.length > 10 ? `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary);">... y ${products.length - 10} más</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button class="btn btn-secondary" style="flex: 1;" onclick="confirmImport(${JSON.stringify(products).replace(/"/g, '&quot;')}, false)">
+                        ➕ Agregar a existentes
+                    </button>
+                    <button class="btn btn-primary" style="flex: 1;" onclick="confirmImport(${JSON.stringify(products).replace(/"/g, '&quot;')}, true)">
+                        🔄 Reemplazar todo
+                    </button>
                 </div>
             `;
         }
 
-        // Confirm import
-        async function confirmImport(products) {
+        async function confirmImport(products, replace) {
             try {
-                // Add line and revision to products
                 const processedProducts = products.map(p => ({
                     ...p,
-                    line: lines[0],
-                    revision: p.stock < p.min ? 'AUMENTAR STOCK' : (p.stock > p.max ? 'SOBRESTOCK' : 'OK'),
+                    code: String(p.code),
                     lastUpdated: new Date().toISOString()
                 }));
-
-                // Add to inventory (or replace if you want)
-                const replace = confirm('¿Deseas REEMPLAZAR todos los productos existentes o AGREGAR estos nuevos productos?\n\nOK = Reemplazar todo\nCancelar = Agregar a los existentes');
                 
                 if (replace) {
+                    await dbClear('products');
                     inventory = processedProducts;
                 } else {
-                    // Merge: update existing or add new
                     processedProducts.forEach(newProd => {
-                        const existingIndex = inventory.findIndex(p => p.code === newProd.code);
-                        if (existingIndex >= 0) {
-                            inventory[existingIndex] = newProd;
+                        const idx = inventory.findIndex(p => p.code === newProd.code);
+                        if (idx >= 0) {
+                            inventory[idx] = newProd;
                         } else {
                             inventory.push(newProd);
                         }
                     });
                 }
-
-                await saveData();
+                
+                await dbBulkPut('products', inventory);
+                
+                // Extract new categories
+                const newCategories = [...new Set(inventory.map(p => p.category).filter(c => c && !categories.includes(c)))];
+                if (newCategories.length > 0) {
+                    categories = [...categories, ...newCategories];
+                    await dbBulkPut('categories', categories.map(name => ({ name })));
+                }
+                
+                filteredInventory = [...inventory];
                 updateDashboard();
                 renderInventoryTable();
                 renderAlerts();
                 renderCategories();
                 populateCategoryFilter();
-                
+                updateCharts();
                 closeImportModal();
-                alert(`✅ ${processedProducts.length} productos importados exitosamente!`);
+                
+                alert(`✅ ${processedProducts.length} productos importados`);
             } catch (error) {
-                alert('❌ Error al importar: ' + error.message);
+                alert('❌ Error: ' + error.message);
             }
         }
 
-        // Text import (paste from Excel)
         function processTextImport() {
             const text = document.getElementById('pasteArea').value.trim();
             if (!text) {
-                alert('⚠️ Por favor pega los datos primero');
+                alert('⚠️ Pega los datos primero');
                 return;
             }
-
+            
             try {
                 const lines = text.split('\n');
                 const products = [];
-
+                
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
-                    const values = lines[i].split('\t'); // Excel uses tabs
+                    const values = lines[i].split('\t');
                     
-                    if (values.length >= 6) {
+                    if (values.length >= 4) {
                         products.push({
-                            code: values[0]?.trim(),
-                            name: values[1]?.trim(),
-                            category: values[2]?.trim(),
+                            code: values[0]?.trim() || '',
+                            name: values[1]?.trim() || '',
+                            category: values[2]?.trim() || '',
                             stock: parseInt(values[3]) || 0,
                             min: parseInt(values[4]) || 0,
                             max: parseInt(values[5]) || 0
                         });
                     }
                 }
-
+                
                 if (products.length === 0) {
-                    alert('⚠️ No se encontraron productos válidos. Asegúrate de incluir los encabezados y datos correctos.');
+                    alert('⚠️ No se encontraron productos válidos');
                     return;
                 }
-
-                processImportedData(products);
+                
+                showImportPreview(products);
+                document.getElementById('textImportStep').style.display = 'none';
+                document.getElementById('excelImportStep').style.display = 'block';
             } catch (error) {
-                alert('❌ Error al procesar los datos: ' + error.message);
+                alert('❌ Error: ' + error.message);
             }
         }
 
-        // JSON import
         async function processJsonImport() {
             const jsonText = document.getElementById('jsonArea').value.trim();
             if (!jsonText) {
-                alert('⚠️ Por favor ingresa el JSON primero');
+                alert('⚠️ Ingresa el JSON');
                 return;
             }
-
+            
             try {
                 const products = JSON.parse(jsonText);
                 
                 if (!Array.isArray(products)) {
-                    alert('⚠️ El JSON debe ser un array de productos');
+                    alert('⚠️ El JSON debe ser un array');
                     return;
                 }
-
-                // Validate products
-                const validProducts = products.filter(p => 
-                    p.code && p.name && p.category && 
-                    typeof p.stock === 'number' && 
-                    typeof p.min === 'number' && 
-                    typeof p.max === 'number'
-                );
-
+                
+                const validProducts = products.filter(p => p.code && p.name);
+                
                 if (validProducts.length === 0) {
-                    alert('⚠️ No se encontraron productos válidos en el JSON');
+                    alert('⚠️ No se encontraron productos válidos');
                     return;
                 }
-
-                await confirmImport(validProducts);
+                
+                await confirmImport(validProducts, true);
             } catch (error) {
-                alert('❌ Error al parsear JSON: ' + error.message);
+                alert('❌ JSON inválido: ' + error.message);
             }
         }
 
-        // Initialize on load
-        window.addEventListener('load', initializeData);
+        function exportData() {
+            if (inventory.length === 0) {
+                alert('⚠️ No hay datos para exportar');
+                return;
+            }
+            
+            const csv = [
+                ['Código', 'Producto', 'Categoría', 'Stock', 'Mínimo', 'Máximo', 'Estado'],
+                ...inventory.map(p => [
+                    p.code, 
+                    `"${(p.name || '').replace(/"/g, '""')}"`,
+                    p.category, 
+                    p.stock, 
+                    p.min, 
+                    p.max, 
+                    getProductStatus(p)
+                ])
+            ].map(row => row.join(',')).join('\n');
+            
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `inventario_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // =====================================================
+        // TABS
+        // =====================================================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            if (tabName === 'alerts') renderAlerts();
+            if (tabName === 'reports') updateCharts();
+            if (tabName === 'categories') renderCategories();
+        }
+
+        // =====================================================
+        // INIT
+        // =====================================================
+        window.addEventListener('load', initializeApp);
     </script>
 </body>
 </html>
+
+      
