@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Inventarios 5:00PM</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            color: #00d4ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .fecha-hora {
+            color: #888;
+            font-size: 0.95rem;
+        }
+
+        .sync-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+
+        .sync-online {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+        }
+
+        .sync-offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .sync-syncing {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        /* Módulos principales */
+        .modulos {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .modulo-btn {
+            padding: 15px 35px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: #aaa;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .modulo-btn:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+
+        .modulo-btn.active {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border-color: #00d4ff;
+            color: #fff;
+        }
+
+        .modulo-btn.crudos.active {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-color: #f59e0b;
+        }
+
+        .modulo-btn.apanados.active {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: #10b981;
+        }
+
+        .modulo-content {
+            display: none;
+        }
+
+        .modulo-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            color: #aaa;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .tab:hover {
+            background: rgba(0, 212, 255, 0.2);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .crudos-tabs .tab.active {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .crudos-tabs .tab:hover {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        .apanados-tabs .tab.active {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .apanados-tabs .tab:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card h2 {
+            color: #00d4ff;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card.crudos-card h2 {
+            color: #f59e0b;
+        }
+
+        .card.apanados-card h2 {
+            color: #10b981;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto auto;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .form-row.no-carros {
+            grid-template-columns: 1fr auto auto auto;
+        }
+
+        .form-row:last-child {
+            border-bottom: none;
+        }
+
+        .producto-nombre {
+            font-weight: 500;
+            color: #ddd;
+        }
+
+        input[type="number"] {
+            width: 70px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .input-label {
+            font-size: 0.75rem;
+            color: #888;
+            text-align: center;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .kg-display {
+            color: #4ade80;
+            font-weight: 600;
+            min-width: 90px;
+            text-align: right;
+        }
+
+        .kg-input {
+            background: rgba(74, 222, 128, 0.1) !important;
+            border-color: rgba(74, 222, 128, 0.3) !important;
+        }
+
+        .kg-input:focus {
+            border-color: #4ade80 !important;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.3) !important;
+        }
+
+        .add-product {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+        }
+
+        .add-product input[type="text"] {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-add {
+            background: #4ade80;
+            color: #000;
+        }
+
+        .btn-add:hover {
+            background: #22c55e;
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+        }
+
+        .btn-delete:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .resumen {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 153, 204, 0.1));
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .resumen.crudos-resumen {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .resumen.apanados-resumen {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .resumen-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .resumen-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .resumen-item .label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .resumen-item .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .resumen.crudos-resumen .resumen-item .value {
+            color: #f59e0b;
+        }
+
+        .resumen.apanados-resumen .resumen-item .value {
+            color: #10b981;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #fff;
+            padding: 15px 30px;
+            font-size: 1rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-primary.crudos-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .btn-primary.crudos-btn:hover {
+            box-shadow: 0 5px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-primary.apanados-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .btn-primary.apanados-btn:hover {
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 15px 30px;
+            font-size: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #4ade80;
+            color: #000;
+            border-radius: 8px;
+            font-weight: 600;
+            transform: translateX(150%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .historial-item {
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .historial-fecha {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .historial-hora {
+            color: #f59e0b;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .historial-total {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .historial-detalle {
+            width: 100%;
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 5px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .historial-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-ver {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        .btn-ver:hover {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .btn-eliminar-hist {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        .btn-eliminar-hist:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .form-row > * {
+                justify-self: start;
+            }
+
+            .kg-display {
+                text-align: left;
+            }
+
+            input[type="number"] {
+                width: 100%;
+            }
+
+            .modulo-btn {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+            }
+
+            .tab {
+                min-width: 100px;
+                padding: 10px 15px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📦 Sistema de Inventarios 5:00PM</h1>
+            <p class="fecha-hora" id="fechaHora"></p>
+            <div class="sync-status sync-syncing" id="syncStatus">⏳ Conectando...</div>
+        </header>
+
+        <!-- Selector de Módulos -->
+        <div class="modulos">
+            <button class="modulo-btn active" data-modulo="derivados">🥓 DERIVADOS</button>
+            <button class="modulo-btn crudos" data-modulo="crudos">🍖 CRUDOS</button>
+            <button class="modulo-btn apanados" data-modulo="apanados">🍗 APANADOS</button>
+        </div>
+
+        <!-- ==================== MÓDULO DERIVADOS ==================== -->
+        <div class="modulo-content active" id="modulo-derivados">
+            <div class="tabs">
+                <button class="tab active" data-tab="proceso">🔄 Proceso</button>
+                <button class="tab" data-tab="materia">📦 Materia Prima</button>
+                <button class="tab" data-tab="terminado">✅ Terminado</button>
+                <button class="tab" data-tab="resumen-derivados">📊 Resumen</button>
+            </div>
+
+            <div class="section active" id="proceso">
+                <div class="card">
+                    <h2>Cava de Producto en Proceso</h2>
+                    <div id="proceso-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="proceso-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('proceso')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="materia">
+                <div class="card">
+                    <h2>Cava Materia Prima</h2>
+                    <div id="materia-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="materia-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('materia')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="terminado">
+                <div class="card">
+                    <h2>Cava de Producto Terminado</h2>
+                    <div id="terminado-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="terminado-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('terminado')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="resumen-derivados">
+                <div class="card resumen">
+                    <h2>📊 Resumen Derivados</h2>
+                    <div class="resumen-grid">
+                        <div class="resumen-item">
+                            <div class="label">Producto en Proceso</div>
+                            <div class="value" id="total-proceso">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Materia Prima</div>
+                            <div class="value" id="total-materia">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Producto Terminado</div>
+                            <div class="value" id="total-terminado">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Total Derivados</div>
+                            <div class="value" id="total-derivados">0 kg</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>📜 Historial de Registros - Derivados</h2>
+                    <div id="historial-derivados">
+                        <div class="loading"><div class="loading-spinner"></div>Cargando historial...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="guardarInventario('derivados')">💾 Guardar Derivados</button>
+                <button class="btn btn-secondary" onclick="exportarExcel('derivados')">📥 Exportar Excel</button>
+                <button class="btn btn-secondary" onclick="limpiarModulo('derivados')">🗑️ Limpiar</button>
+            </div>
+        </div>
+
+        <!-- ==================== MÓDULO CRUDOS ==================== -->
+        <div class="modulo-content" id="modulo-crudos">
+            <div class="tabs crudos-tabs">
+                <button class="tab active" data-tab="cr-proceso">🔄 Proceso</button>
+                <button class="tab" data-tab="cr-cava-mp1">📦 MP N°1</button>
+                <button class="tab" data-tab="cava-mp">📦 MP N°2y3</button>
+                <button class="tab" data-tab="tunel">🧊 Túnel</button>
+                <button class="tab" data-tab="resumen-crudos">📊 Resumen</button>
+            </div>
+
+            <div class="section active" id="cr-proceso">
+                <div class="card crudos-card">
+                    <h2>Cava de Producto en Proceso</h2>
+                    <div id="cr-proceso-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="cr-proceso-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('cr-proceso')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="cr-cava-mp1">
+                <div class="card crudos-card">
+                    <h2>Cava Materia Prima N° 1</h2>
+                    <div id="cr-cava-mp1-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="cr-cava-mp1-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('cr-cava-mp1')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="cava-mp">
+                <div class="card crudos-card">
+                    <h2>Cava Materia Prima N° 2 Y 3</h2>
+                    <div id="cava-mp-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="cava-mp-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('cava-mp')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="tunel">
+                <div class="card crudos-card">
+                    <h2>Túnel</h2>
+                    <div id="tunel-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="tunel-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('tunel')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="resumen-crudos">
+                <div class="card resumen crudos-resumen">
+                    <h2>📊 Resumen Crudos</h2>
+                    <div class="resumen-grid">
+                        <div class="resumen-item">
+                            <div class="label">Producto en Proceso</div>
+                            <div class="value" id="total-cr-proceso">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Cava MP N°1</div>
+                            <div class="value" id="total-cr-cava-mp1">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Cava MP N°2 Y 3</div>
+                            <div class="value" id="total-cava-mp">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Túnel</div>
+                            <div class="value" id="total-tunel">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Total Crudos</div>
+                            <div class="value" id="total-crudos">0 kg</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>📜 Historial de Registros - Crudos</h2>
+                    <div id="historial-crudos">
+                        <div class="loading"><div class="loading-spinner"></div>Cargando historial...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary crudos-btn" onclick="guardarInventario('crudos')">💾 Guardar Crudos</button>
+                <button class="btn btn-secondary" onclick="exportarExcel('crudos')">📥 Exportar Excel</button>
+                <button class="btn btn-secondary" onclick="limpiarModulo('crudos')">🗑️ Limpiar</button>
+            </div>
+        </div>
+
+        <!-- ==================== MÓDULO APANADOS ==================== -->
+        <div class="modulo-content" id="modulo-apanados">
+            <div class="tabs apanados-tabs">
+                <button class="tab active" data-tab="ap-cava-mp">📦 Cava MP</button>
+                <button class="tab" data-tab="ap-ventiladores">🌀 Ventiladores</button>
+                <button class="tab" data-tab="ap-pasillo">🚶 Pasillo</button>
+                <button class="tab" data-tab="ap-terminado">✅ Terminado</button>
+                <button class="tab" data-tab="resumen-apanados">📊 Resumen</button>
+            </div>
+
+            <div class="section active" id="ap-cava-mp">
+                <div class="card apanados-card">
+                    <h2>Cava Materia Prima - Apanados</h2>
+                    <div id="ap-cava-mp-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="ap-cava-mp-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('ap-cava-mp')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="ap-ventiladores">
+                <div class="card apanados-card">
+                    <h2>Ventiladores</h2>
+                    <div id="ap-ventiladores-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="ap-ventiladores-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('ap-ventiladores')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="ap-pasillo">
+                <div class="card apanados-card">
+                    <h2>Pasillo</h2>
+                    <div id="ap-pasillo-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="ap-pasillo-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('ap-pasillo')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="ap-terminado">
+                <div class="card apanados-card">
+                    <h2>Cava Producto Terminado - Apanados</h2>
+                    <div id="ap-terminado-list"></div>
+                    <div class="add-product">
+                        <input type="text" id="ap-terminado-nuevo-nombre" placeholder="Nuevo producto...">
+                        <button class="btn btn-add" onclick="agregarProducto('ap-terminado')">+ Agregar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="resumen-apanados">
+                <div class="card resumen apanados-resumen">
+                    <h2>📊 Resumen Apanados</h2>
+                    <div class="resumen-grid">
+                        <div class="resumen-item">
+                            <div class="label">Cava Materia Prima</div>
+                            <div class="value" id="total-ap-cava-mp">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Ventiladores</div>
+                            <div class="value" id="total-ap-ventiladores">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Pasillo</div>
+                            <div class="value" id="total-ap-pasillo">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Producto Terminado</div>
+                            <div class="value" id="total-ap-terminado">0 kg</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="label">Total Apanados</div>
+                            <div class="value" id="total-apanados">0 kg</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>📜 Historial de Registros - Apanados</h2>
+                    <div id="historial-apanados">
+                        <div class="loading"><div class="loading-spinner"></div>Cargando historial...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary apanados-btn" onclick="guardarInventario('apanados')">💾 Guardar Apanados</button>
+                <button class="btn btn-secondary" onclick="exportarExcel('apanados')">📥 Exportar Excel</button>
+                <button class="btn btn-secondary" onclick="limpiarModulo('apanados')">🗑️ Limpiar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">✓ Guardado exitosamente</div>
+
+    <script>
+        // ==================== FIREBASE CONFIG ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAm2Q9151uZwXwvtiQioblE4A99sclml3I",
+            authDomain: "inventario-produccion-531d0.firebaseapp.com",
+            databaseURL: "https://inventario-produccion-531d0-default-rtdb.firebaseio.com",
+            projectId: "inventario-produccion-531d0",
+            storageBucket: "inventario-produccion-531d0.firebasestorage.app",
+            messagingSenderId: "253761779110",
+            appId: "1:253761779110:web:0456d0854025436f520b67"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ==================== DATOS ====================
+        let datos = {
+            proceso: [
+                { nombre: 'Punta y recorte', canastas: 0, kg: 0 },
+                { nombre: 'Tocineta premium', canastas: 0, kg: 0 },
+                { nombre: 'Tocineta seleccionada', canastas: 0, kg: 0 }
+            ],
+            materia: [
+                { nombre: 'Cerdo industrial', canastas: 0, kg: 0 },
+                { nombre: 'Grasa', canastas: 0, kg: 0 },
+                { nombre: 'Reproceso', canastas: 0, kg: 0 },
+                { nombre: 'Toppings', canastas: 0, kg: 0 },
+                { nombre: 'Pasta', canastas: 0, kg: 0 }
+            ],
+            terminado: [
+                { nombre: 'Picatta', canastas: 0, kg: 0 },
+                { nombre: 'Bios', canastas: 0, kg: 0 },
+                { nombre: 'Reempaque', canastas: 0, kg: 0 }
+            ],
+            'cr-proceso': [
+                { nombre: 'Recorte Marinado', canastas: 0, kg: 0 },
+                { nombre: 'FUP 150', canastas: 0, kg: 0 },
+                { nombre: 'P.A', canastas: 0, kg: 0 },
+                { nombre: 'Todo Fresa', canastas: 0, kg: 0 },
+                { nombre: 'Chuleton', canastas: 0, kg: 0 },
+                { nombre: 'Grasa', canastas: 0, kg: 0 }
+            ],
+            'cr-cava-mp1': [
+                { nombre: 'Rabadilla', canastas: 0, kg: 0 }
+            ],
+            'cava-mp': [
+                { nombre: 'ML USA INY', canastas: 0, kg: 0 },
+                { nombre: 'Filete Chuleton', canastas: 0, kg: 0 },
+                { nombre: 'Carcasa', canastas: 0, kg: 0 },
+                { nombre: 'Pechuga Bucanero', canastas: 0, kg: 0 }
+            ],
+            tunel: [
+                { nombre: 'FUP 100', carros: 0, canastas: 0, kg: 0 },
+                { nombre: 'Recorte', carros: 0, canastas: 0, kg: 0 },
+                { nombre: 'CP 200 X10', carros: 0, canastas: 0, kg: 0 },
+                { nombre: 'Pasta tipo A', carros: 0, canastas: 0, kg: 0 },
+                { nombre: 'FN 100 X20', carros: 0, canastas: 0, kg: 0 },
+                { nombre: 'FADOBADO', carros: 0, canastas: 0, kg: 0 },
+                { nombre: 'Alas BIOS', carros: 0, canastas: 0, kg: 0 },
+                { nombre: 'FN 100 COA', carros: 0, canastas: 0, kg: 0 }
+            ],
+            'ap-cava-mp': [
+                { nombre: 'Mezcla de hamburguesa', canastas: 0, kg: 0 },
+                { nombre: 'Filete friko', canastas: 0, kg: 0 },
+                { nombre: 'Carcasa', canastas: 0, kg: 0 }
+            ],
+            'ap-ventiladores': [
+                { nombre: 'Pechuga', canastas: 0, kg: 0 }
+            ],
+            'ap-pasillo': [
+                { nombre: 'Pechuga', canastas: 0, kg: 0 },
+                { nombre: 'Lomos bucanero', canastas: 0, kg: 0 }
+            ],
+            'ap-terminado': [
+                { nombre: 'Sarku', canastas: 0, kg: 0 },
+                { nombre: 'Chicken 330', canastas: 0, kg: 0 },
+                { nombre: 'Chicken 1000', canastas: 0, kg: 0 },
+                { nombre: 'Filete 100 X empacar', canastas: 0, kg: 0 },
+                { nombre: 'Palos X empacar', canastas: 0, kg: 0 },
+                { nombre: 'Reproceso', canastas: 0, kg: 0 },
+                { nombre: 'Promoción', canastas: 0, kg: 0 }
+            ]
+        };
+
+        let historial = { derivados: [], crudos: [], apanados: [] };
+
+        // ==================== SYNC STATUS ====================
+        function updateSyncStatus(status) {
+            const el = document.getElementById('syncStatus');
+            if (status === 'online') {
+                el.className = 'sync-status sync-online';
+                el.innerHTML = '🟢 Conectado';
+            } else if (status === 'offline') {
+                el.className = 'sync-status sync-offline';
+                el.innerHTML = '🔴 Sin conexión';
+            } else {
+                el.className = 'sync-status sync-syncing';
+                el.innerHTML = '⏳ Sincronizando...';
+            }
+        }
+
+        // Detectar conexión
+        database.ref('.info/connected').on('value', (snap) => {
+            updateSyncStatus(snap.val() ? 'online' : 'offline');
+        });
+
+        // ==================== FECHA/HORA ====================
+        function actualizarFecha() {
+            const ahora = new Date();
+            const opciones = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('fechaHora').textContent = ahora.toLocaleDateString('es-ES', opciones);
+        }
+        actualizarFecha();
+        setInterval(actualizarFecha, 60000);
+
+        // ==================== CARGAR DATOS DE FIREBASE ====================
+        function cargarDatosFirebase() {
+            // Cargar productos - usar 'once' primero para cargar, luego 'on' para sincronizar
+            database.ref('productos').once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const datosFirebase = snapshot.val();
+                    Object.keys(datos).forEach(seccion => {
+                        if (datosFirebase[seccion]) {
+                            datos[seccion] = datosFirebase[seccion];
+                        }
+                    });
+                } else {
+                    // Si no hay datos en Firebase, guardar los datos iniciales
+                    database.ref('productos').set(datos);
+                }
+                // Renderizar todas las listas
+                Object.keys(datos).forEach(seccion => {
+                    renderizarLista(seccion);
+                });
+                
+                // Ahora suscribirse a cambios en tiempo real
+                database.ref('productos').on('value', (snap) => {
+                    if (snap.exists()) {
+                        const datosActualizados = snap.val();
+                        Object.keys(datos).forEach(seccion => {
+                            if (datosActualizados[seccion]) {
+                                datos[seccion] = datosActualizados[seccion];
+                            }
+                        });
+                        Object.keys(datos).forEach(seccion => {
+                            renderizarLista(seccion);
+                        });
+                    }
+                });
+            });
+
+            // Cargar historial
+            ['derivados', 'crudos', 'apanados'].forEach(modulo => {
+                database.ref(`historial/${modulo}`).orderByChild('fecha').limitToLast(20).on('value', (snapshot) => {
+                    historial[modulo] = [];
+                    if (snapshot.exists()) {
+                        snapshot.forEach(child => {
+                            historial[modulo].unshift({ id: child.key, ...child.val() });
+                        });
+                    }
+                    renderizarHistorial(modulo);
+                });
+            });
+        }
+
+        // ==================== RENDERIZAR LISTAS ====================
+        function renderizarLista(seccion) {
+            const lista = document.getElementById(`${seccion}-list`);
+            if (!lista || !datos[seccion]) return;
+            lista.innerHTML = '';
+
+            datos[seccion].forEach((producto, index) => {
+                const row = document.createElement('div');
+                
+                if (seccion === 'tunel') {
+                    row.className = 'form-row';
+                    row.innerHTML = `
+                        <span class="producto-nombre">${producto.nombre}</span>
+                        <div class="input-group">
+                            <input type="number" value="${producto.carros || 0}" min="0" 
+                                   onchange="actualizarValor('${seccion}', ${index}, 'carros', this.value)"
+                                   placeholder="0">
+                            <span class="input-label">Carros</span>
+                        </div>
+                        <div class="input-group">
+                            <input type="number" value="${producto.canastas || 0}" min="0" 
+                                   onchange="actualizarValor('${seccion}', ${index}, 'canastas', this.value)"
+                                   placeholder="0">
+                            <span class="input-label">Canastas</span>
+                        </div>
+                        <div class="input-group">
+                            <input type="number" value="${producto.kg || 0}" min="0" 
+                                   onchange="actualizarValor('${seccion}', ${index}, 'kg', this.value)"
+                                   placeholder="0" class="kg-input">
+                            <span class="input-label">Kg</span>
+                        </div>
+                        <button class="btn btn-delete" onclick="eliminarProducto('${seccion}', ${index})">✕</button>
+                    `;
+                } else {
+                    row.className = 'form-row no-carros';
+                    row.innerHTML = `
+                        <span class="producto-nombre">${producto.nombre}</span>
+                        <div class="input-group">
+                            <input type="number" value="${producto.canastas || 0}" min="0" 
+                                   onchange="actualizarValor('${seccion}', ${index}, 'canastas', this.value)"
+                                   placeholder="0">
+                            <span class="input-label">Canastas</span>
+                        </div>
+                        <div class="input-group">
+                            <input type="number" value="${producto.kg || 0}" min="0" 
+                                   onchange="actualizarValor('${seccion}', ${index}, 'kg', this.value)"
+                                   placeholder="0" class="kg-input">
+                            <span class="input-label">Kg</span>
+                        </div>
+                        <button class="btn btn-delete" onclick="eliminarProducto('${seccion}', ${index})">✕</button>
+                    `;
+                }
+                lista.appendChild(row);
+            });
+
+            actualizarResumen();
+        }
+
+        // ==================== ACTUALIZAR VALORES ====================
+        function actualizarValor(seccion, index, campo, valor) {
+            datos[seccion][index][campo] = parseFloat(valor) || 0;
+            // Guardar en Firebase
+            database.ref(`productos/${seccion}`).set(datos[seccion]);
+            actualizarResumen();
+        }
+
+        // ==================== AGREGAR/ELIMINAR PRODUCTOS ====================
+        function agregarProducto(seccion) {
+            const nombre = document.getElementById(`${seccion}-nuevo-nombre`).value.trim();
+
+            if (nombre) {
+                if (seccion === 'tunel') {
+                    datos[seccion].push({ nombre, carros: 0, canastas: 0, kg: 0 });
+                } else {
+                    datos[seccion].push({ nombre, canastas: 0, kg: 0 });
+                }
+                document.getElementById(`${seccion}-nuevo-nombre`).value = '';
+                
+                // Guardar en Firebase
+                database.ref(`productos/${seccion}`).set(datos[seccion]);
+                renderizarLista(seccion);
+                mostrarToast('Producto agregado');
+            }
+        }
+
+        function eliminarProducto(seccion, index) {
+            if (confirm('¿Eliminar este producto?')) {
+                datos[seccion].splice(index, 1);
+                // Guardar en Firebase
+                database.ref(`productos/${seccion}`).set(datos[seccion]);
+                renderizarLista(seccion);
+                mostrarToast('Producto eliminado');
+            }
+        }
+
+        // ==================== RESUMEN ====================
+        function actualizarResumen() {
+            // Derivados
+            const totalProceso = (datos.proceso || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalMateria = (datos.materia || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalTerminado = (datos.terminado || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalDerivados = totalProceso + totalMateria + totalTerminado;
+
+            document.getElementById('total-proceso').textContent = `${totalProceso.toFixed(0)} kg`;
+            document.getElementById('total-materia').textContent = `${totalMateria.toFixed(0)} kg`;
+            document.getElementById('total-terminado').textContent = `${totalTerminado.toFixed(0)} kg`;
+            document.getElementById('total-derivados').textContent = `${totalDerivados.toFixed(0)} kg`;
+
+            // Crudos
+            const totalCrProceso = (datos['cr-proceso'] || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalCrCavaMP1 = (datos['cr-cava-mp1'] || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalCavaMP = (datos['cava-mp'] || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalTunel = (datos.tunel || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalCrudos = totalCrProceso + totalCrCavaMP1 + totalCavaMP + totalTunel;
+
+            document.getElementById('total-cr-proceso').textContent = `${totalCrProceso.toFixed(0)} kg`;
+            document.getElementById('total-cr-cava-mp1').textContent = `${totalCrCavaMP1.toFixed(0)} kg`;
+            document.getElementById('total-cava-mp').textContent = `${totalCavaMP.toFixed(0)} kg`;
+            document.getElementById('total-tunel').textContent = `${totalTunel.toFixed(0)} kg`;
+            document.getElementById('total-crudos').textContent = `${totalCrudos.toFixed(0)} kg`;
+
+            // Apanados
+            const totalApCavaMP = (datos['ap-cava-mp'] || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalApVentiladores = (datos['ap-ventiladores'] || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalApPasillo = (datos['ap-pasillo'] || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalApTerminado = (datos['ap-terminado'] || []).reduce((sum, p) => sum + (p.kg || 0), 0);
+            const totalApanados = totalApCavaMP + totalApVentiladores + totalApPasillo + totalApTerminado;
+
+            document.getElementById('total-ap-cava-mp').textContent = `${totalApCavaMP.toFixed(0)} kg`;
+            document.getElementById('total-ap-ventiladores').textContent = `${totalApVentiladores.toFixed(0)} kg`;
+            document.getElementById('total-ap-pasillo').textContent = `${totalApPasillo.toFixed(0)} kg`;
+            document.getElementById('total-ap-terminado').textContent = `${totalApTerminado.toFixed(0)} kg`;
+            document.getElementById('total-apanados').textContent = `${totalApanados.toFixed(0)} kg`;
+        }
+
+        // ==================== GUARDAR EN FIREBASE ====================
+        function guardarInventario(modulo) {
+            const ahora = new Date();
+            const registro = {
+                fecha: ahora.toISOString(),
+                fechaStr: ahora.toLocaleDateString('es-ES'),
+                horaStr: ahora.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}),
+                modulo: modulo,
+                datos: {},
+                totales: {},
+                totalGeneral: 0
+            };
+
+            if (modulo === 'derivados') {
+                registro.datos = {
+                    proceso: JSON.parse(JSON.stringify(datos.proceso)),
+                    materia: JSON.parse(JSON.stringify(datos.materia)),
+                    terminado: JSON.parse(JSON.stringify(datos.terminado))
+                };
+                registro.totales = {
+                    proceso: datos.proceso.reduce((sum, p) => sum + (p.kg || 0), 0),
+                    materia: datos.materia.reduce((sum, p) => sum + (p.kg || 0), 0),
+                    terminado: datos.terminado.reduce((sum, p) => sum + (p.kg || 0), 0)
+                };
+                registro.totalGeneral = registro.totales.proceso + registro.totales.materia + registro.totales.terminado;
+            } else if (modulo === 'crudos') {
+                registro.datos = {
+                    'cr-proceso': JSON.parse(JSON.stringify(datos['cr-proceso'])),
+                    'cr-cava-mp1': JSON.parse(JSON.stringify(datos['cr-cava-mp1'])),
+                    'cava-mp': JSON.parse(JSON.stringify(datos['cava-mp'])),
+                    'tunel': JSON.parse(JSON.stringify(datos.tunel))
+                };
+                registro.totales = {
+                    proceso: datos['cr-proceso'].reduce((sum, p) => sum + (p.kg || 0), 0),
+                    cavaMP1: datos['cr-cava-mp1'].reduce((sum, p) => sum + (p.kg || 0), 0),
+                    cavaMP: datos['cava-mp'].reduce((sum, p) => sum + (p.kg || 0), 0),
+                    tunel: datos.tunel.reduce((sum, p) => sum + (p.kg || 0), 0)
+                };
+                registro.totalGeneral = registro.totales.proceso + registro.totales.cavaMP1 + registro.totales.cavaMP + registro.totales.tunel;
+            } else if (modulo === 'apanados') {
+                registro.datos = {
+                    'ap-cava-mp': JSON.parse(JSON.stringify(datos['ap-cava-mp'])),
+                    'ap-ventiladores': JSON.parse(JSON.stringify(datos['ap-ventiladores'])),
+                    'ap-pasillo': JSON.parse(JSON.stringify(datos['ap-pasillo'])),
+                    'ap-terminado': JSON.parse(JSON.stringify(datos['ap-terminado']))
+                };
+                registro.totales = {
+                    cavaMP: datos['ap-cava-mp'].reduce((sum, p) => sum + (p.kg || 0), 0),
+                    ventiladores: datos['ap-ventiladores'].reduce((sum, p) => sum + (p.kg || 0), 0),
+                    pasillo: datos['ap-pasillo'].reduce((sum, p) => sum + (p.kg || 0), 0),
+                    terminado: datos['ap-terminado'].reduce((sum, p) => sum + (p.kg || 0), 0)
+                };
+                registro.totalGeneral = registro.totales.cavaMP + registro.totales.ventiladores + registro.totales.pasillo + registro.totales.terminado;
+            }
+
+            // Guardar en Firebase
+            database.ref(`historial/${modulo}`).push(registro)
+                .then(() => {
+                    mostrarToast(`Inventario ${modulo} guardado - ${registro.horaStr}`);
+                })
+                .catch(error => {
+                    mostrarToast('Error al guardar: ' + error.message);
+                });
+        }
+
+        // ==================== RENDERIZAR HISTORIAL ====================
+        function renderizarHistorial(modulo) {
+            const contenedor = document.getElementById(`historial-${modulo}`);
+            if (!contenedor) return;
+
+            const registrosModulo = historial[modulo] || [];
+
+            if (registrosModulo.length === 0) {
+                contenedor.innerHTML = '<p style="color: #888; text-align: center;">No hay registros guardados</p>';
+                return;
+            }
+
+            contenedor.innerHTML = registrosModulo.map(reg => {
+                let detalleHTML = '';
+                if (modulo === 'derivados' && reg.totales) {
+                    detalleHTML = `Proceso: ${reg.totales.proceso || 0} kg | Materia Prima: ${reg.totales.materia || 0} kg | Terminado: ${reg.totales.terminado || 0} kg`;
+                } else if (modulo === 'crudos' && reg.totales) {
+                    detalleHTML = `Proceso: ${reg.totales.proceso || 0} kg | MP N°1: ${reg.totales.cavaMP1 || 0} kg | MP N°2y3: ${reg.totales.cavaMP || 0} kg | Túnel: ${reg.totales.tunel || 0} kg`;
+                } else if (modulo === 'apanados' && reg.totales) {
+                    detalleHTML = `Cava MP: ${reg.totales.cavaMP || 0} kg | Ventiladores: ${reg.totales.ventiladores || 0} kg | Pasillo: ${reg.totales.pasillo || 0} kg | Terminado: ${reg.totales.terminado || 0} kg`;
+                }
+
+                return `
+                    <div class="historial-item">
+                        <div>
+                            <span class="historial-fecha">${reg.fechaStr || ''}</span>
+                            <span class="historial-hora">⏰ ${reg.horaStr || ''}</span>
+                        </div>
+                        <span class="historial-total">${(reg.totalGeneral || 0).toFixed(0)} kg total</span>
+                        <div class="historial-actions">
+                            <button class="btn btn-ver" onclick="cargarRegistro('${reg.id}', '${modulo}')">📂 Cargar</button>
+                            <button class="btn btn-eliminar-hist" onclick="eliminarRegistro('${reg.id}', '${modulo}')">🗑️</button>
+                        </div>
+                        <div class="historial-detalle">${detalleHTML}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== CARGAR REGISTRO ====================
+        function cargarRegistro(id, modulo) {
+            const registro = historial[modulo].find(r => r.id === id);
+            if (!registro || !registro.datos) return;
+
+            if (!confirm(`¿Cargar el registro del ${registro.fechaStr} a las ${registro.horaStr}? Esto reemplazará los datos actuales.`)) return;
+
+            if (modulo === 'derivados') {
+                if (registro.datos.proceso) datos.proceso = JSON.parse(JSON.stringify(registro.datos.proceso));
+                if (registro.datos.materia) datos.materia = JSON.parse(JSON.stringify(registro.datos.materia));
+                if (registro.datos.terminado) datos.terminado = JSON.parse(JSON.stringify(registro.datos.terminado));
+                ['proceso', 'materia', 'terminado'].forEach(sec => {
+                    database.ref(`productos/${sec}`).set(datos[sec]);
+                    renderizarLista(sec);
+                });
+            } else if (modulo === 'crudos') {
+                if (registro.datos['cr-proceso']) datos['cr-proceso'] = JSON.parse(JSON.stringify(registro.datos['cr-proceso']));
+                if (registro.datos['cr-cava-mp1']) datos['cr-cava-mp1'] = JSON.parse(JSON.stringify(registro.datos['cr-cava-mp1']));
+                if (registro.datos['cava-mp']) datos['cava-mp'] = JSON.parse(JSON.stringify(registro.datos['cava-mp']));
+                if (registro.datos['tunel']) datos.tunel = JSON.parse(JSON.stringify(registro.datos['tunel']));
+                ['cr-proceso', 'cr-cava-mp1', 'cava-mp', 'tunel'].forEach(sec => {
+                    database.ref(`productos/${sec}`).set(datos[sec]);
+                    renderizarLista(sec);
+                });
+            } else if (modulo === 'apanados') {
+                if (registro.datos['ap-cava-mp']) datos['ap-cava-mp'] = JSON.parse(JSON.stringify(registro.datos['ap-cava-mp']));
+                if (registro.datos['ap-ventiladores']) datos['ap-ventiladores'] = JSON.parse(JSON.stringify(registro.datos['ap-ventiladores']));
+                if (registro.datos['ap-pasillo']) datos['ap-pasillo'] = JSON.parse(JSON.stringify(registro.datos['ap-pasillo']));
+                if (registro.datos['ap-terminado']) datos['ap-terminado'] = JSON.parse(JSON.stringify(registro.datos['ap-terminado']));
+                ['ap-cava-mp', 'ap-ventiladores', 'ap-pasillo', 'ap-terminado'].forEach(sec => {
+                    database.ref(`productos/${sec}`).set(datos[sec]);
+                    renderizarLista(sec);
+                });
+            }
+
+            mostrarToast(`Registro cargado: ${registro.horaStr}`);
+        }
+
+        // ==================== ELIMINAR REGISTRO ====================
+        function eliminarRegistro(id, modulo) {
+            if (!confirm('¿Eliminar este registro del historial?')) return;
+
+            database.ref(`historial/${modulo}/${id}`).remove()
+                .then(() => {
+                    mostrarToast('Registro eliminado');
+                })
+                .catch(error => {
+                    mostrarToast('Error al eliminar: ' + error.message);
+                });
+        }
+
+        // ==================== EXPORTAR EXCEL ====================
+        function exportarExcel(modulo) {
+            let csv = '';
+            const fecha = new Date().toLocaleDateString('es-ES');
+            const hora = new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
+
+            if (modulo === 'derivados') {
+                csv = 'INVENTARIO 5:00PM DERIVADOS\n';
+                csv += `Fecha:,${fecha},Hora:,${hora}\n\n`;
+
+                csv += 'CAVA DE PRODUCTO EN PROCESO\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos.proceso.forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nCAVA MATERIA PRIMA\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos.materia.forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nCAVA DE PRODUCTO TERMINADO\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos.terminado.forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+            } else if (modulo === 'crudos') {
+                csv = 'INVENTARIO 5:00PM CRUDOS\n';
+                csv += `Fecha:,${fecha},Hora:,${hora}\n\n`;
+
+                csv += 'CAVA DE PRODUCTO EN PROCESO\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos['cr-proceso'].forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nCAVA MATERIA PRIMA N° 1\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos['cr-cava-mp1'].forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nCAVA MATERIA PRIMA N° 2 Y 3\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos['cava-mp'].forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nTÚNEL\n';
+                csv += 'Producto,Carros,Canastas,Kg Aproximados\n';
+                datos.tunel.forEach(p => {
+                    csv += `${p.nombre},${p.carros},${p.canastas},${p.kg || 0}\n`;
+                });
+            } else if (modulo === 'apanados') {
+                csv = 'INVENTARIO 12:00PM APANADOS\n';
+                csv += `Fecha:,${fecha},Hora:,${hora}\n\n`;
+
+                csv += 'CAVA MATERIA PRIMA\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos['ap-cava-mp'].forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nVENTILADORES\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos['ap-ventiladores'].forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nPASILLO\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos['ap-pasillo'].forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+
+                csv += '\nCAVA PRODUCTO TERMINADO\n';
+                csv += 'Producto,Canastas,Kg Aproximados\n';
+                datos['ap-terminado'].forEach(p => {
+                    csv += `${p.nombre},${p.canastas},${p.kg || 0}\n`;
+                });
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `inventario_${modulo}_${new Date().toISOString().split('T')[0]}_${hora.replace(':', '-')}.csv`;
+            link.click();
+
+            mostrarToast('Archivo exportado');
+        }
+
+        // ==================== LIMPIAR ====================
+        function limpiarModulo(modulo) {
+            if (!confirm(`¿Limpiar todos los datos de ${modulo}?`)) return;
+
+            if (modulo === 'derivados') {
+                ['proceso', 'materia', 'terminado'].forEach(sec => {
+                    datos[sec].forEach(p => { p.canastas = 0; p.kg = 0; });
+                    database.ref(`productos/${sec}`).set(datos[sec]);
+                    renderizarLista(sec);
+                });
+            } else if (modulo === 'crudos') {
+                datos['cr-proceso'].forEach(p => { p.canastas = 0; p.kg = 0; });
+                datos['cr-cava-mp1'].forEach(p => { p.canastas = 0; p.kg = 0; });
+                datos['cava-mp'].forEach(p => { p.canastas = 0; p.kg = 0; });
+                datos.tunel.forEach(p => { p.carros = 0; p.canastas = 0; p.kg = 0; });
+                ['cr-proceso', 'cr-cava-mp1', 'cava-mp', 'tunel'].forEach(sec => {
+                    database.ref(`productos/${sec}`).set(datos[sec]);
+                    renderizarLista(sec);
+                });
+            } else if (modulo === 'apanados') {
+                ['ap-cava-mp', 'ap-ventiladores', 'ap-pasillo', 'ap-terminado'].forEach(sec => {
+                    datos[sec].forEach(p => { p.canastas = 0; p.kg = 0; });
+                    database.ref(`productos/${sec}`).set(datos[sec]);
+                    renderizarLista(sec);
+                });
+            }
+            mostrarToast('Datos limpiados');
+        }
+
+        // ==================== TOAST ====================
+        function mostrarToast(mensaje) {
+            const toast = document.getElementById('toast');
+            toast.textContent = '✓ ' + mensaje;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // ==================== NAVEGACIÓN MÓDULOS ====================
+        document.querySelectorAll('.modulo-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.modulo-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.modulo-content').forEach(c => c.classList.remove('active'));
+                
+                btn.classList.add('active');
+                document.getElementById(`modulo-${btn.dataset.modulo}`).classList.add('active');
+            });
+        });
+
+        // ==================== NAVEGACIÓN TABS ====================
+        document.querySelectorAll('.tabs').forEach(tabsContainer => {
+            tabsContainer.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const parent = tab.closest('.modulo-content');
+                    parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    parent.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                    
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                });
+            });
+        });
+
+        // ==================== INICIALIZAR ====================
+        cargarDatosFirebase();
+    </script>
+</body>
+</html>
